@@ -22,7 +22,7 @@ class HandTrack(threading.Thread):
             set_par = json.load(json_file)
             try:
                 set_par[self.set_env]
-            except ValueError:
+            except KeyError:
                 self.out_parameters()
                 self.set_parameters()
             else:
@@ -44,11 +44,11 @@ class HandTrack(threading.Thread):
         # set your env name
         set_par[self.set_env] = []
         set_par[self.set_env].append({
-            'append_caffe': 0,
-            'caffe_path': '',
-            'mode': 1,
-            'data_path': 'C:\\Users\\Kellen\\Pictures\\dataset\\webcam5\\',
-            'net_base_path': 'C:\\Users\\Kellen\\NeoHand_server\\model\\'
+            'append_caffe': 1,
+            'caffe_path': 'C:\\Users\\P100\\caffe\\python',
+            'mode': 0,
+            'data_path': 'C:\\Users\\P100\\NeoHand_server\\dataset\\',
+            'net_base_path': 'C:\\Users\\P100\\NeoHand_server\\model\\'
         })
         with open('setting_py.json', 'w') as outfile:
             json.dump(set_par, outfile)
@@ -76,7 +76,7 @@ class HandTrack(threading.Thread):
         # Bounding box
         BB_file = self.data_path + 'boundbox.txt'
         # 測試圖片的路徑 *****檔名要改*****
-        image = self.data_path + 'webcam_0.jpg'  # image_list->image
+        image = self.data_path + 'webcam_0.png'  # image_list->image
         # 參數
         crop_size = 128
         num_joints = 21
