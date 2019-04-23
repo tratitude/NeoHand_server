@@ -175,9 +175,9 @@ class HandTrack(threading.Thread):
             pred_3D = pred['joints3D_final_vec']
 
             pred_3D = np.reshape(pred_3D, (3, -1))
-            #print(pred_3D[:, 0:3])
+            # print(pred_3D[:, 0:3])
             self.all_pred3D[i - 1, :, :] = pred_3D
-    
+
     def model_result(self):
         for i in range(self.num_images):
             for out_1 in self.all_pred3D:
@@ -186,10 +186,3 @@ class HandTrack(threading.Thread):
                     for out_3 in out_2:
                         fp.write('{:0.6} '.format(out_3))
                 fp.close()
-
-
-thread = []
-thread.append(HandTrack('fdmdkw'))
-thread[0].start()
-thread[0].hand_track_model()
-thread[0].model_result()
