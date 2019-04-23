@@ -100,10 +100,9 @@ class HandTrack(threading.Thread):
         net = caffe.Net((net_base_path + net_architecture), (net_base_path + net_weights), caffe.TEST)
 
         for i in range(num_images):
-            image_full = caffe.io.load_image(image)  # image_list->image   暫時沒測 mat無法顯示
+            image_full = caffe.io.load_image(image)
             image_full_vis = image_full
             image_full = (image_full * 255).astype('int32')
-            # image_full_vis = float(image_full)/255     #io.load值維0~1
             height = image_full.shape[0]
             width = image_full.shape[1]
             minBB_u = BB_data[i - 1][0]
@@ -163,7 +162,6 @@ class HandTrack(threading.Thread):
             # forward net
             # *******************
             tight_crop_sized = tight_crop_sized.swapaxes(0, 2)
-            #tight_crop_sized = tight_crop_sized.swapaxes(1, 2)
             tight_crop_sized = tight_crop_sized[np.newaxis, :]
             net.blobs['color_crop'].data[...] = tight_crop_sized
             pred = net.forward()
@@ -172,7 +170,6 @@ class HandTrack(threading.Thread):
             pred_3D = pred['joints3D_final_vec']
 
             pred_3D = np.reshape(pred_3D, (3, -1))
-            #print(pred_3D[:, 0:3])
             all_pred3D[i - 1, :, :] = pred_3D
     def model_result():
         for out_1 in all_pred3D:
