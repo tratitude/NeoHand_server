@@ -14,7 +14,6 @@ class HandTrack(threading.Thread):
         threading.Thread.__init__(self)
         # set_env is your env name in json
         self.set_env = set_env
-        self.out_parameters()
         self.set_parameters()
 
     # setting from json
@@ -23,7 +22,7 @@ class HandTrack(threading.Thread):
             set_par = json.load(json_file)
             try:
                 set_par[self.set_env]
-            except KeyError:
+            except ValueError:
                 self.out_parameters()
                 self.set_parameters()
             else:

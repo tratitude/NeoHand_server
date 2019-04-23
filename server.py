@@ -1,8 +1,8 @@
-from EvalRegNet_ImageSequence import HandTrack
+from model.EvalRegNet_ImageSequence import HandTrack
 
 import socket
 import threading
-
+'''
 hostname = ''
 port = 555
 
@@ -29,11 +29,11 @@ class TServer (threading.Thread):
 while True:
     connect_socket, client_addr = server.accept()
     TServer(connect_socket, client_addr).start()
-    
 
+'''
 # server main function
-# thread = []
-# thread.append(HandTrack('fdmdkw'))
-# thread[0].start()
-# thread[0].hand_track_model()
-# thread[0].model_result()
+thread = []
+thread.append(HandTrack('fdmdkw'))
+thread[0].start()
+thread[0].hand_track_model()
+thread[0].model_result()
