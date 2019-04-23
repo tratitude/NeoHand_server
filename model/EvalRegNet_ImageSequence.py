@@ -93,10 +93,10 @@ class HandTrack(threading.Thread):
             #self.image_full = (self.image_full * 255).astype('int32')
             height = self.image_full.shape[0]
             width = self.image_full.shape[1]
-            minBB_u = self.BB_data[i - 1][0]
-            minBB_v = self.BB_data[i - 1][1]
-            maxBB_u = self.BB_data[i - 1][2]
-            maxBB_v = self.BB_data[i - 1][3]
+            minBB_u = self.BB_data[i][0]
+            minBB_v = self.BB_data[i][1]
+            maxBB_u = self.BB_data[i][2]
+            maxBB_v = self.BB_data[i][3]
             width_BB = maxBB_u - minBB_u + 1
             height_BB = maxBB_v - minBB_v + 1
 
