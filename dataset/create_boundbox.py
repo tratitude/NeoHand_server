@@ -1,10 +1,11 @@
 import os
 
-DIR = 'C:\\Users\\Kellen\\Pictures\\dataset\\webcam2\\'
+DIR = 'C:\\Users\\Kellen\\Pictures\\dataset\\webcam4\\'
 width = 640
 height = 480
-file_num = len([name for name in os.listdir(DIR) if os.path.isfile(os.path.join(DIR, name))])
 bb_file = open(DIR+'boundbox.txt', 'w')
+file_num = len([name for name in os.listdir(DIR) if os.path.isfile(os.path.join(DIR, name))])
+file_num = file_num - 1
 
 # file containing one line per image with: u_start, v_start, u_end, v_end of hand
 # u -> width, v -> height

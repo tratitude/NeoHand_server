@@ -6,6 +6,11 @@ import numpy.matlib
 import scipy
 import matplotlib.pyplot as plt
 import json
+import threading
+
+class HandTrack(threading.Thread):
+	def __init__(self):
+		threading.Thread.__init__(self)
 
 # setting from json
 with open('setting_py.json') as json_file:

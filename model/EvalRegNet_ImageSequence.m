@@ -3,9 +3,9 @@ clear;
 % add your matcaffe path here
 addpath('C:\Users\Kellen\caffe\matlab');
 % path to your images
-data_path = 'C:\Users\Kellen\Pictures\dataset\webcam2\';
+data_path = 'C:\Users\Kellen\Pictures\dataset\webcam4\';
 data_prefix = 'webcam';
-data_suffix = '.png';
+data_suffix = '.jpg';
 % file containing one line per image with: u_start, v_start, u_end, v_end of hand
 % bounding box
 BB_file = [data_path, 'boundbox.txt'];
