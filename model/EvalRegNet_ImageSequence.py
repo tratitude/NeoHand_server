@@ -22,7 +22,7 @@ class HandTrack(threading.Thread):
             set_par = json.load(json_file)
             try:
                 set_par[self.set_env]
-            except KeyError:
+            except ValueError:
                 self.out_parameters()
                 self.set_parameters()
             else:

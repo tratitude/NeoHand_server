@@ -1,1 +1,20 @@
-{"P100": [{"append_caffe": 1, "caffe_path": "C:\\Users\\P100\\caffe\\python", "mode": 0, "data_path": "C:\\Users\\P100\\NeoHand_server\\dataset\\picture\\", "net_base_path": "C:\\Users\\P100\\NeoHand_server\\model\\"}]}
+{
+    "P100": [
+        {
+            "append_caffe": 1, 
+            "caffe_path": "C:\\Users\\P100\\caffe\\python", 
+            "mode": 0, 
+            "data_path": "C:\\Users\\P100\\NeoHand_server\\dataset\\picture\\", 
+            "net_base_path": "C:\\Users\\P100\\NeoHand_server\\model\\"
+            }
+        ],
+    "fdmdkw": [
+        {
+            "net_base_path": "C:\\Users\\Kellen\\NeoHand_server\\model\\",
+            "caffe_path": "",
+            "data_path": "C:\\Users\\Kellen\\NeoHand_server\\dataset\\picture\\",
+            "append_caffe": 0,
+            "mode": 1
+        }
+    ]
+}

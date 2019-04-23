@@ -33,7 +33,7 @@ while True:
 '''
 # server main function
 thread = []
-thread.append(HandTrack('P100'))
+thread.append(HandTrack('fdmdkw'))
 thread[0].start()
 thread[0].hand_track_model()
 thread[0].model_result()
