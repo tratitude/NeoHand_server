@@ -37,6 +37,17 @@ class HandTrack(threading.Thread):
                     self.data_path = par['data_path']
                     # 檔案位子
                     self.net_base_path = par['net_base_path']
+                if self.append_caffe == 1:
+                    sys.path.append(self.caffe_path)
+                import caffe
+
+                if self.mode == 1:
+                    # 模式設定為CPU
+                    caffe.set_mode_cpu()
+                else:
+                    # 模式設定為GPU
+                    caffe.set_mode_gpu()
+                self.num_images = 1
 
     # output setting to json
     def out_parameters(self):
@@ -54,64 +65,38 @@ class HandTrack(threading.Thread):
             json.dump(set_par, outfile)
 
     def hand_track_model(self):
-        if self.append_caffe == 1:
-            sys.path.append(self.caffe_path)
-        import caffe
-
-        if self.mode == 1:
-            # 模式設定為CPU
-            caffe.set_mode_cpu()
-        else:
-            # 模式設定為GPU
-            caffe.set_mode_gpu()
-
-        # path of pred_3D result
-        self.pred3D_result = self.data_path + 'result_py\\'
-        if not os.path.exists(self.pred3D_result):
-            os.makedirs(self.pred3D_result)
         # deploy檔案的路徑
         net_architecture = 'RegNet_deploy.prototxt'
         # 預訓練好的caffemodel的模型
         net_weights = 'RegNet_weights.caffemodel'
-        # Bounding box
-        BB_file = self.data_path + 'boundbox.txt'
-        # 測試圖片的路徑 *****檔名要改*****
-        image = self.data_path + 'webcam_0.png'  # image_list->image
         # 參數
         crop_size = 128
         num_joints = 21
         o1_parent = [1, 1, 2, 3, 4, 1, 6, 7, 8, 1, 10, 11, 12, 1, 14, 15, 16, 1, 18, 19, 20]
-        # 一次一張
-        self.num_images = 1
         # 建造零矩陣 *****矩陣可能長得跟matlab不一樣*****
         self.all_pred3D = np.zeros(shape=(self.num_images, 3, num_joints))
         self.all_pred2D = np.zeros(shape=(self.num_images, 3, num_joints))
-        # dlmread 可抓多行輸入
-        BB_predata = open(BB_file, 'r')
-        temp = BB_predata.readlines()
-        for i in range(0, temp.__len__(), 1):
-            BB_data = []
-            for word in temp[i].split():
-                word = word.strip(' ')
-                BB_data.append(int(word))
-        BB_data = np.atleast_2d(BB_data)
-
+        # image list
+        self.image_full = np.zero((self.num_images, 480, 640, 3), dtype=np.int32)
+        # bounding box
+        self.BB_data = np.zero()
+        
         # data number = BB data
-        if np.array(BB_data).shape[0] != self.num_images:
+        if np.array(self.BB_data).shape[0] != self.num_images:
             raise Exception("Bounding box file needs one line per image")
 
         net = caffe.Net((self.net_base_path+net_architecture), (self.net_base_path+net_weights), caffe.TEST)
 
         for i in range(self.num_images):
-            image_full = caffe.io.load_image(image)  # image_list->image   暫時沒測 mat無法顯示
-            image_full_vis = image_full
-            image_full = (image_full * 255).astype('int32')
-            height = image_full.shape[0]
-            width = image_full.shape[1]
-            minBB_u = BB_data[i - 1][0]
-            minBB_v = BB_data[i - 1][1]
-            maxBB_u = BB_data[i - 1][2]
-            maxBB_v = BB_data[i - 1][3]
+            #self.image_full = caffe.io.load_image(image)  # image_list->image   暫時沒測 mat無法顯示
+            #self.image_full_vis = self.image_full
+            #self.image_full = (self.image_full * 255).astype('int32')
+            height = self.image_full.shape[0]
+            width = self.image_full.shape[1]
+            minBB_u = self.BB_data[i - 1][0]
+            minBB_v = self.BB_data[i - 1][1]
+            maxBB_u = self.BB_data[i - 1][2]
+            maxBB_v = self.BB_data[i - 1][3]
             width_BB = maxBB_u - minBB_u + 1
             height_BB = maxBB_v - minBB_v + 1
 
@@ -137,7 +122,7 @@ class HandTrack(threading.Thread):
             endBB_v = offset_h + height_BB
 
             #   matlab的index從1開始，python從0--->往左移一格
-            tight_crop[offset_h:(endBB_v - 1), offset_w:(endBB_u - 1), :] = image_full[minBB_v - 1:maxBB_v - 1,
+            tight_crop[offset_h:(endBB_v - 1), offset_w:(endBB_u - 1), :] = self.image_full[minBB_v - 1:maxBB_v - 1,
                                                                             minBB_u - 1:maxBB_u - 1, :]
 
             # repeat last color at boundaries
@@ -178,11 +163,33 @@ class HandTrack(threading.Thread):
             self.all_pred3D[i - 1, :, :] = pred_3D
 
     # write pred3D to file
-    def model_result(self):
-        for i in range(self.num_images):
-            for out_1 in self.all_pred3D:
-                fp = open(self.pred3D_result+str(i)+'_pred3D_py.txt', 'w')
-                for out_2 in out_1:
-                    for out_3 in out_2:
-                        fp.write('{:0.6} '.format(out_3))
-                fp.close()
+    def write_result(self):
+        # path of pred_3D result
+        self.pred3D_result = self.data_path + 'result_py\\'
+        if not os.path.exists(self.pred3D_result):
+            os.makedirs(self.pred3D_result)
+        fp = open(self.pred3D_result+str(i)+'_pred3D_py.txt', 'w')
+        fp.write('{:0.6} '.format(self.all_pred3D))
+        fp.close()
+
+    # buf is a string(strlen*num_images)
+    '''
+    def write_result_buf(self, buf):
+        for p in range(self.num_images):
+    '''
+
+    # buf is a np.int32(H*W*3)
+    def load_image_buf(self, buf):
+        for b in range(self.num_images):
+            self.image_full.append(buf[b])
+
+    def load_image_file(self):
+        # Bounding box
+        BB_file = self.data_path + 'boundbox.txt'
+        # dlmread 可抓多行輸入
+        BB_predata = open(BB_file, 'r')
+        temp = BB_predata.readlines()
+        for i in range(0, temp.__len__(), 1):
+            for word in temp[i].split():
+                word = word.strip(' ')
+                self.BB_data.append(int(word))
