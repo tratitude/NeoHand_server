@@ -1,4 +1,4 @@
-import os  # for test
+import os
 import sys
 import math
 import numpy as np
@@ -80,7 +80,7 @@ class HandTrack(threading.Thread):
         o1_parent = [1, 1, 2, 3, 4, 1, 6, 7, 8, 1, 10, 11, 12, 1, 14, 15, 16, 1, 18, 19, 20]
         # 一次一張
         num_images = 1
-        # 建造零矩陣 *****矩陣可能長得跟matlab不一樣*****
+        # 建造零矩陣
         all_pred3D = np.zeros(shape=(num_images, 3, num_joints))
         all_pred2D = np.zeros(shape=(num_images, 3, num_joints))
         # dlmread 可抓多行輸入
@@ -106,7 +106,6 @@ class HandTrack(threading.Thread):
             # image_full_vis = float(image_full)/255     #io.load值維0~1
             height = image_full.shape[0]
             width = image_full.shape[1]
-            # 單張圖片為一為陣列
             minBB_u = BB_data[i - 1][0]
             minBB_v = BB_data[i - 1][1]
             maxBB_u = BB_data[i - 1][2]
@@ -154,14 +153,14 @@ class HandTrack(threading.Thread):
                 tight_crop[endBB_v:sidelength, :, :] = np.matlib.tile(tight_crop[endBB_v - 1, :, :],
                                                                     [sidelength - endBB_v, 1, 1])
 
-            ## resize and normalize     ***檢查
+            ## resize and normalize
             tight_crop_sized = scipy.misc.imresize(tight_crop, (crop_size, crop_size), interp='bilinear',mode='RGB')
             image_crop_vis = tight_crop_sized / 255
 
             # transform from [0,255] to [-1,1]
             tight_crop_sized = (tight_crop_sized / 127.5) - 1
             tight_crop_sized = np.transpose(tight_crop_sized, (1, 0, 2))
-            # forward net  要檢查值
+            # forward net
             # *******************
             tight_crop_sized = tight_crop_sized.swapaxes(0, 2)
             #tight_crop_sized = tight_crop_sized.swapaxes(1, 2)
