@@ -8,34 +8,39 @@ import matplotlib.pyplot as plt
 import json
 import threading
 
+
 class HandTrack(threading.Thread):
-	def __init__(self, set_env):
-		threading.Thread.__init__(self)
+    def __init__(self, set_env):
+        threading.Thread.__init__(self)
         # set_env is your env name in json
         self.set_env = set_env
+        self.out_parameters()
         self.set_parameters()
+
     # setting from json
-    def set_parameters(): 
-        with open('setting_py.json') as json_file:
+    def set_parameters(self):
+        with open('setting_py.json', 'r') as json_file:
             set_par = json.load(json_file)
             try:
                 set_par[self.set_env]
-            except:
+            except KeyError:
                 self.out_parameters()
                 self.set_parameters()
             else:
                 for par in set_par[self.set_env]:
                     # need to append caffe or not
-                    append_caffe = par['append_caffe']
+                    self.append_caffe = par['append_caffe']
                     # caffe root path
-                    caffe_path = par['caffe_path']
+                    self.caffe_path = par['caffe_path']
                     # cpu mode or gpu mode
-                    mode = par['mode']
+                    self.mode = par['mode']
                     # path to your images
-                    data_path = par['data_path']
-    
+                    self.data_path = par['data_path']
+                    # 檔案位子
+                    self.net_base_path = par['net_base_path']
+
     # output setting to json
-    def out_parameters():
+    def out_parameters(self):
         set_par = {}
         # set your env name
         set_par[self.set_env] = []
@@ -43,17 +48,18 @@ class HandTrack(threading.Thread):
             'append_caffe': 0,
             'caffe_path': '',
             'mode': 1,
-            'data_path': 'C:\\Users\\Kellen\\Pictures\\dataset\\webcam5\\'
+            'data_path': 'C:\\Users\\Kellen\\Pictures\\dataset\\webcam5\\',
+            'net_base_path': 'C:\\Users\\Kellen\\NeoHand_server\\model\\'
         })
         with open('setting_py.json', 'w') as outfile:
             json.dump(set_par, outfile)
 
-    def hand_track_model():
-        if append_caffe == 1:
-            sys.path.append(caffe_path)
+    def hand_track_model(self):
+        if self.append_caffe == 1:
+            sys.path.append(self.caffe_path)
         import caffe
 
-        if mode == 1:
+        if self.mode == 1:
             # 模式設定為CPU
             caffe.set_mode_cpu()
         else:
@@ -61,28 +67,26 @@ class HandTrack(threading.Thread):
             caffe.set_mode_gpu()
 
         # path of pred_3D result
-        pred3D_result = data_path + 'result_py\\'
-        if not os.path.exists(pred3D_result):
-            os.makedirs(pred3D_result)
-        # 檔案位子
-        net_base_path = '.\\'
+        self.pred3D_result = self.data_path + 'result_py\\'
+        if not os.path.exists(self.pred3D_result):
+            os.makedirs(self.pred3D_result)
         # deploy檔案的路徑
         net_architecture = 'RegNet_deploy.prototxt'
         # 預訓練好的caffemodel的模型
         net_weights = 'RegNet_weights.caffemodel'
         # Bounding box
-        BB_file = data_path + 'boundbox.txt'
-        # 測試圖片的路徑 *****檔名要改***** 
-        image = data_path + 'webcam_0.jpg'  # image_list->image
+        BB_file = self.data_path + 'boundbox.txt'
+        # 測試圖片的路徑 *****檔名要改*****
+        image = self.data_path + 'webcam_0.jpg'  # image_list->image
         # 參數
         crop_size = 128
         num_joints = 21
         o1_parent = [1, 1, 2, 3, 4, 1, 6, 7, 8, 1, 10, 11, 12, 1, 14, 15, 16, 1, 18, 19, 20]
         # 一次一張
-        num_images = 1
+        self.num_images = 1
         # 建造零矩陣 *****矩陣可能長得跟matlab不一樣*****
-        all_pred3D = np.zeros(shape=(num_images, 3, num_joints))
-        all_pred2D = np.zeros(shape=(num_images, 3, num_joints))
+        self.all_pred3D = np.zeros(shape=(self.num_images, 3, num_joints))
+        self.all_pred2D = np.zeros(shape=(self.num_images, 3, num_joints))
         # dlmread 可抓多行輸入
         BB_predata = open(BB_file, 'r')
         temp = BB_predata.readlines()
@@ -94,12 +98,12 @@ class HandTrack(threading.Thread):
         BB_data = np.atleast_2d(BB_data)
 
         # data number = BB data
-        if np.array(BB_data).shape[0] != num_images:
+        if np.array(BB_data).shape[0] != self.num_images:
             raise Exception("Bounding box file needs one line per image")
 
-        net = caffe.Net((net_base_path + net_architecture), (net_base_path + net_weights), caffe.TEST)
+        net = caffe.Net((self.net_base_path+net_architecture), (self.net_base_path+net_weights), caffe.TEST)
 
-        for i in range(num_images):
+        for i in range(self.num_images):
             image_full = caffe.io.load_image(image)  # image_list->image   暫時沒測 mat無法顯示
             image_full_vis = image_full
             image_full = (image_full * 255).astype('int32')
@@ -164,7 +168,7 @@ class HandTrack(threading.Thread):
             # forward net  要檢查值
             # *******************
             tight_crop_sized = tight_crop_sized.swapaxes(0, 2)
-            #tight_crop_sized = tight_crop_sized.swapaxes(1, 2)
+            # tight_crop_sized = tight_crop_sized.swapaxes(1, 2)
             tight_crop_sized = tight_crop_sized[np.newaxis, :]
             net.blobs['color_crop'].data[...] = tight_crop_sized
             pred = net.forward()
@@ -174,16 +178,20 @@ class HandTrack(threading.Thread):
 
             pred_3D = np.reshape(pred_3D, (3, -1))
             #print(pred_3D[:, 0:3])
-            all_pred3D[i - 1, :, :] = pred_3D
-    def model_result():
-        for out_1 in all_pred3D:
-            fp = open(pred3D_result+str(i)+'_pred3D_py.txt', 'w')
-            for out_2 in out_1:
-                for out_3 in out_2:
-                    fp.write('{:0.6} '.format(out_3))
-            fp.close()
+            self.all_pred3D[i - 1, :, :] = pred_3D
+    
+    def model_result(self):
+        for i in range(self.num_images):
+            for out_1 in self.all_pred3D:
+                fp = open(self.pred3D_result+str(i)+'_pred3D_py.txt', 'w')
+                for out_2 in out_1:
+                    for out_3 in out_2:
+                        fp.write('{:0.6} '.format(out_3))
+                fp.close()
 
-thread(HandTrack('fdmdkw'))
-thread.start()
-thread.hand_track_model()
-thread.model_result
+
+thread = []
+thread.append(HandTrack('fdmdkw'))
+thread[0].start()
+thread[0].hand_track_model()
+thread[0].model_result()
