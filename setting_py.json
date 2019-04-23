@@ -1,1 +1,1 @@
-{"fdmdkw": [{"append_caffe": 0, "net_base_path": "C:\\Users\\Kellen\\NeoHand_server\\model\\", "mode": 1, "caffe_path": "", "data_path": "C:\\Users\\Kellen\\Pictures\\dataset\\webcam5\\"}]}
+{"fdmdkw": [{"append_caffe": 0, "caffe_path": "", "mode": 1, "net_base_path": "C:\\Users\\Kellen\\NeoHand_server\\model\\", "data_path": "C:\\Users\\Kellen\\Pictures\\dataset\\webcam5\\"}]}
