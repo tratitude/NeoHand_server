@@ -178,6 +178,7 @@ class HandTrack(threading.Thread):
             # print(pred_3D[:, 0:3])
             self.all_pred3D[i - 1, :, :] = pred_3D
 
+    # write pred3D to file
     def model_result(self):
         for i in range(self.num_images):
             for out_1 in self.all_pred3D:
