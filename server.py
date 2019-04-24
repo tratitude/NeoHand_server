@@ -1,5 +1,6 @@
 from model.EvalRegNet_ImageSequence import HandTrack
-
+import os
+os.environ['GLOG_minloglevel'] = '2'
 import socket
 import threading
 '''
@@ -34,7 +35,7 @@ while True:
 # server main function
 thread = []
 # HandTrack('env name', image numbers)
-thread.append(HandTrack('fdmdkw', 1))
+thread.append(HandTrack('P100', 1))
 
 # setting variables
 thread[0].start()

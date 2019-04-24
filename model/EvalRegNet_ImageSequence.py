@@ -92,15 +92,14 @@ class HandTrack(threading.Thread):
             #self.image_full = caffe.io.load_image(image)  # image_list->image   暫時沒測 mat無法顯示
             #self.image_full_vis = self.image_full
             #self.image_full = (self.image_full * 255).astype('int32')
-            height = self.image_full.shape[0]
-            width = self.image_full.shape[1]
+            height = self.image_full.shape[1]
+            width = self.image_full.shape[2]
             minBB_u = self.BB_data[i][0]
             minBB_v = self.BB_data[i][1]
             maxBB_u = self.BB_data[i][2]
             maxBB_v = self.BB_data[i][3]
             width_BB = maxBB_u - minBB_u + 1
             height_BB = maxBB_v - minBB_v + 1
-
             sidelength = max(width_BB, height_BB)
             tight_crop = np.zeros((sidelength, sidelength, 3))
 
@@ -182,7 +181,6 @@ class HandTrack(threading.Thread):
                 orig_uv=np.array([minBB_u, minBB_v])+ orig_BB_uv
                 self.all_pred2D[i, 0:2, j] = orig_uv
                 self.all_pred2D[i, 2, j] = conf
-                self.write_result2D()
                 
     # write pred3D to file
     def write_result(self, buf):
@@ -199,11 +197,13 @@ class HandTrack(threading.Thread):
     def write_result2D(self):
         # path of pred_3D result
         buf_2D= [self.num_images]
+        self.all_pred2D=np.swapaxes(self.all_pred2D,1,2)
+        print(self.all_pred2D.shape)
         for i in range(self.num_images):
             strbuf = ''
-            for j in range(3):
-                for k in range(self.num_joints):
-                    strbuf = strbuf + str(self.all_pred2D[i, j, k]) + ' '
+            for k in range(self.num_joints):
+                for j in range(3):
+                    strbuf = strbuf + str(self.all_pred2D[i, k, j]) + ' '
             buf_2D.append(strbuf)
         self.pred3D_result = self.data_path + 'result_py\\'
         if not os.path.exists(self.pred3D_result):
