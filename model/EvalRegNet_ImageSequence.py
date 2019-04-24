@@ -158,11 +158,32 @@ class HandTrack(threading.Thread):
             # *******************
             heatmaps = pred['heatmap_final']
             pred_3D = pred['joints3D_final_vec']
-
             pred_3D = np.reshape(pred_3D, (3, -1))
-            # print(pred_3D[:, 0:3])
             self.all_pred3D[i - 1, :, :] = pred_3D
+            # heatmap 數值誤差 會導致結果誤差
+            heatmaps=np.reshape(heatmaps,(22,32,32))
+            all_pred3D[i - 1, :, :] = pred_3D
+            resize_fact = sidelength / crop_size
+            for j in range(num_joints):
+                heatj=heatmaps[j,:,:]
+                heatj=np.transpose(heatj)
+                heatj_crop=scipy.misc.imresize(heatj,(crop_size,crop_size),interp='bicubic',mode='F')
+                conf=np.max(heatj_crop[:])
+                maxLoc=np.argmax(heatj_crop)
+                max_u=int(maxLoc/128)
+                max_v=int(maxLoc%128)
+                #orig_BB_uv = bsxfun(@min, [width_BB; height_BB], bsxfun(@max, [10;1], round([max_u; max_v] * resize_fact - [offset_w; offset_h])))
+                BB_tmp=np.array([width_BB, height_BB]).astype(int)
+                max_tmp=np.array([max_u,max_v])*resize_fact
+                offset_tmp=np.array([offset_w,offset_h])
+                BB_tmp2=((max_tmp-offset_tmp)+0.5).astype(int)
+                orig_BB_uv = np.minimum(BB_tmp,np.maximum([1,1],BB_tmp2))
+                #*************************************
+                orig_uv=np.array([minBB_u, minBB_v])+ orig_BB_uv
+                all_pred2D[i, 0:2, j] = orig_uv
+                all_pred2D[i, 2, j] = conf
 
+                
     # write pred3D to file
     def write_result(self, buf):
         # path of pred_3D result
