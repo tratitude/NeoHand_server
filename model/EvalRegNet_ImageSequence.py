@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import json
 import threading
 
-
 class HandTrack(threading.Thread):
     def __init__(self, set_env, num_img):
         threading.Thread.__init__(self)
@@ -165,6 +164,48 @@ class HandTrack(threading.Thread):
             pred_3D = np.reshape(pred_3D, (3, -1))
             # print(pred_3D[:, 0:3])
             self.all_pred3D[i - 1, :, :] = pred_3D
+
+             # heatmap 數值誤差 會導致結果誤差
+            heatmaps=np.reshape(heatmaps,(22,32,32))
+            resize_fact = sidelength / crop_size
+            for j in range(self.num_joints):
+                heatj=heatmaps[j,:,:]
+                heatj=np.transpose(heatj)
+                heatj_crop=scipy.misc.imresize(heatj,(crop_size,crop_size),interp='bicubic',mode='F')
+                conf=np.max(heatj_crop[:])
+                maxLoc=np.argmax(heatj_crop)
+                max_u=int(maxLoc/128)
+                max_v=int(maxLoc%128)
+                #orig_BB_uv = bsxfun(@min, [width_BB; height_BB], bsxfun(@max, [10;1], round([max_u; max_v] * resize_fact - [offset_w; offset_h])))
+                BB_tmp=np.array([width_BB, height_BB]).astype(int)
+                max_tmp=np.array([max_u,max_v])*resize_fact
+                offset_tmp=np.array([offset_w,offset_h])
+                BB_tmp2=((max_tmp-offset_tmp)+0.5).astype(int)
+                orig_BB_uv = np.minimum(BB_tmp,np.maximum([1,1],BB_tmp2))
+                #*************************************
+                orig_uv=np.array([minBB_u, minBB_v])+ orig_BB_uv
+                self.all_pred2D[i, 0:2, j] = orig_uv
+                self.all_pred2D[i, 2, j] = conf
+
+    # write pred2D to file
+    def write_result2D(self):
+        # path of pred_3D result
+        buf_2D= [self.num_images]
+        self.all_pred2D=np.swapaxes(self.all_pred2D,1,2)
+        print(self.all_pred2D.shape)
+        for i in range(self.num_images):
+            strbuf = ''
+            for k in range(self.num_joints):
+                for j in range(3):
+                    strbuf = strbuf + str(self.all_pred2D[i, k, j]) + ' '
+            buf_2D.append(strbuf)
+        self.pred3D_result = self.data_path + 'result_py\\'
+        if not os.path.exists(self.pred3D_result):
+            os.makedirs(self.pred3D_result)
+        for i in range(self.num_images):
+            fp = open(self.pred3D_result+str(i+1)+'_pred2D_py.txt', 'w')
+            fp.write(buf_2D[i+1])
+            fp.close()
 
     # write pred3D to file
     def write_result_file(self, buf):

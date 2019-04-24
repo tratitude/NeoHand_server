@@ -1,9 +1,8 @@
 from model.EvalRegNet_ImageSequence import HandTrack
-
+import os
 import socket
 import threading
 
-import os
 import base64
 import re
 import numpy as np
@@ -12,6 +11,7 @@ from PIL import Image
 from PIL import ImageFile
 from io import BytesIO
 
+os.environ['GLOG_minloglevel'] = '2'
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 hostname = ''
@@ -60,6 +60,7 @@ class TServer (threading.Thread):
                     # send
                     for i in range(model_freq):
                         self.socket.send(model_result[i+1].encode('ascii'))
+                        self.recv_que.clear()
                         send_count = send_count + 1
                         print('send data: {}'.format(send_count))
             except:
