@@ -1,5 +1,5 @@
 clear;
-data_path = 'C:\Users\Kellen\Pictures\ganerate dataset\webcam5\result_py\';
+data_path = 'C:\Users\Kellen\NeoHand_server\dataset\picture\result_py\';
 data_prefix = 'pred3D_py';
 data_suffix = '.txt';
 num_joints = 21;
