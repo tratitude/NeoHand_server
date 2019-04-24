@@ -25,7 +25,7 @@ running = {}
 lock = threading.Lock()
 
 # run model frequency
-model_freq = 3
+model_freq = 1
 
 class TServer (threading.Thread):
     def __init__ (self, socket, addr, func=None):
