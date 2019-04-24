@@ -33,7 +33,8 @@ while True:
 '''
 # server main function
 thread = []
-thread.append(HandTrack('fdmdkw'))
+# HandTrack('env name', image numbers)
+thread.append(HandTrack('fdmdkw', 1))
 
 # setting variables
 thread[0].start()

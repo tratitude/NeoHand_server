@@ -10,10 +10,11 @@ import threading
 
 
 class HandTrack(threading.Thread):
-    def __init__(self, set_env):
+    def __init__(self, set_env, num_img):
         threading.Thread.__init__(self)
         # set_env is your env name in json
         self.set_env = set_env
+        self.num_images = num_img
         self.set_parameters()
 
     # setting from json
@@ -40,7 +41,6 @@ class HandTrack(threading.Thread):
                 if self.append_caffe == 1:
                     sys.path.append(self.caffe_path)
                 
-                self.num_images = 1
                 self.num_joints = 21
                 # 建造零矩陣 *****矩陣可能長得跟matlab不一樣*****
                 self.all_pred3D = np.zeros((self.num_images, 3, self.num_joints))
@@ -172,9 +172,9 @@ class HandTrack(threading.Thread):
         self.pred3D_result = self.data_path + 'result_py\\'
         if not os.path.exists(self.pred3D_result):
             os.makedirs(self.pred3D_result)
-        for i in range(1, self.num_images):
-            fp = open(self.pred3D_result+str(i)+'_pred3D_py.txt', 'w')
-            fp.write(buf[i])
+        for i in range(self.num_images):
+            fp = open(self.pred3D_result+str(i+1)+'_pred3D_py.txt', 'w')
+            fp.write(buf[i+1])
             fp.close()
 
     # outbuf type -> string list (8*num_images)
@@ -182,21 +182,23 @@ class HandTrack(threading.Thread):
         buf = [self.num_images]
         for i in range(self.num_images):
             strbuf = ''
-            for j in range(self.num_joints):
-                for k in range(3):
-                    strbuf = strbuf + str(self.all_pred3D[i, k, j]) + ' '
+            for j in range(3):
+                for k in range(self.num_joints):
+                    strbuf = strbuf + str(self.all_pred3D[i, j, k]) + ' '
             buf.append(strbuf)
         return buf
 
     # buf is a np.int32(H*W*3)
     def load_image_buf(self, buf):
         for b in range(self.num_images):
-            self.image_full[b, ...] = buf
+            self.image_full[b, ...] = buf[b]
 
     def load_image_file(self):
-        img_name = self.data_path + 'webcam_0.png'
-        buf = scipy.misc.imread(img_name)
-        buf = buf.astype('int32')
+        buf = []
+        for i in range(self.num_images):
+            img_name = self.data_path + 'webcam_'+str(1)+'.jpg'
+            buf.append(scipy.misc.imread(img_name))
+            buf[i] = buf[i].astype('int32')
         return buf
 
     def init_boundbox(self):
