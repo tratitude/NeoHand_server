@@ -167,7 +167,7 @@ class HandTrack(threading.Thread):
             self.all_pred3D[i - 1, :, :] = pred_3D
 
     # write pred3D to file
-    def write_result(self, buf):
+    def write_result_file(self, buf):
         # path of pred_3D result
         self.pred3D_result = self.data_path + 'result_py\\'
         if not os.path.exists(self.pred3D_result):
@@ -186,7 +186,7 @@ class HandTrack(threading.Thread):
                 for k in range(self.num_joints):
                     strbuf = strbuf + '{:.3f} '.format(self.all_pred3D[i, j, k])
             buf.append(strbuf)
-        return buf[1]
+        return buf
 
     # buf is a np.int32(H*W*3)
     def load_image_buf(self, buf):

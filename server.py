@@ -24,32 +24,44 @@ server.listen(5)
 running = {}
 lock = threading.Lock()
 
+# run model frequency
+model_freq = 3
+
 class TServer (threading.Thread):
     def __init__ (self, socket, addr, func=None):
         threading.Thread.__init__(self)
         self.socket = socket
         self.address = addr
         self.func = func
+        self.recv_que = []
+        self.send_que = []
 
     def run (self):
         strSend = ""
-        count = 0
+        recv_count = 0
+        send_count = 0
         while True:
             try:
                 data = self.socket.recv(65536)
                 if not data:
+                    print('recieve data failed: {}'.format(recv_count))
                     break
-                print('recieve data')
+                recv_count = recv_count + 1
+                print('recieve data success: {}'.format(recv_count))
                 img = Image.open(BytesIO(base64.b64decode(data)))
                 img = np.array(img).astype('int32')
+                # append in que
+                self.recv_que.append(img)
 
-                if self.func==None:
-                    strSend = ""
-                else:
-                    strSend = self.func(img)
-                    self.socket.send(strSend.encode('ascii'))
-                    print('send data')
-
+                # recv
+                if recv_count % model_freq == 0:
+                    recv_count = 0
+                    model_result = self.func(self.recv_que)
+                    # send
+                    for i in range(model_freq):
+                        self.socket.send(model_result[i+1].encode('ascii'))
+                        send_count = send_count + 1
+                        print('send data: {}'.format(send_count))
             except:
                 self.socket.close()
                 break
@@ -62,10 +74,9 @@ class TServer (threading.Thread):
             # count += 1
 
 def handtrack(inputbuf):
-    # server main function
     thread = []
     # HandTrack('env name', image numbers)
-    thread.append(HandTrack('fdmdkw', 1))
+    thread.append(HandTrack('fdmdkw', model_freq))
 
     # setting variables
     thread[0].start()
@@ -83,7 +94,7 @@ def handtrack(inputbuf):
     outbuf = thread[0].write_result_buf()
 
     # write result
-    #thread[0].write_result(outbuf)
+    #thread[0].write_result_file(outbuf)
     return outbuf
 
 while True:
