@@ -121,7 +121,7 @@ class HandTrack(threading.Thread):
             # fill crop
             endBB_u = offset_w + width_BB
             endBB_v = offset_h + height_BB
-
+            
             #   matlab的index從1開始，python從0--->往左移一格
             tight_crop[offset_h:(endBB_v - 1), offset_w:(endBB_u - 1), :] = self.image_full[i, minBB_v - 1:maxBB_v - 1,
                                                                             minBB_u - 1:maxBB_u - 1, :]
@@ -141,6 +141,7 @@ class HandTrack(threading.Thread):
                 tight_crop[endBB_v:sidelength, :, :] = np.matlib.tile(tight_crop[endBB_v - 1, :, :],
                                                                     [sidelength - endBB_v, 1, 1])
 
+            
             ## resize and normalize
             tight_crop_sized = scipy.misc.imresize(tight_crop, (crop_size, crop_size), interp='bilinear',mode='RGB')
             image_crop_vis = tight_crop_sized / 255
@@ -162,9 +163,8 @@ class HandTrack(threading.Thread):
             self.all_pred3D[i - 1, :, :] = pred_3D
             # heatmap 數值誤差 會導致結果誤差
             heatmaps=np.reshape(heatmaps,(22,32,32))
-            all_pred3D[i - 1, :, :] = pred_3D
             resize_fact = sidelength / crop_size
-            for j in range(num_joints):
+            for j in range(self.num_joints):
                 heatj=heatmaps[j,:,:]
                 heatj=np.transpose(heatj)
                 heatj_crop=scipy.misc.imresize(heatj,(crop_size,crop_size),interp='bicubic',mode='F')
@@ -180,9 +180,9 @@ class HandTrack(threading.Thread):
                 orig_BB_uv = np.minimum(BB_tmp,np.maximum([1,1],BB_tmp2))
                 #*************************************
                 orig_uv=np.array([minBB_u, minBB_v])+ orig_BB_uv
-                all_pred2D[i, 0:2, j] = orig_uv
-                all_pred2D[i, 2, j] = conf
-
+                self.all_pred2D[i, 0:2, j] = orig_uv
+                self.all_pred2D[i, 2, j] = conf
+                self.write_result2D()
                 
     # write pred3D to file
     def write_result(self, buf):
@@ -193,6 +193,24 @@ class HandTrack(threading.Thread):
         for i in range(self.num_images):
             fp = open(self.pred3D_result+str(i+1)+'_pred3D_py.txt', 'w')
             fp.write(buf[i+1])
+            fp.close()
+
+    # write pred2D to file
+    def write_result2D(self):
+        # path of pred_3D result
+        buf_2D= [self.num_images]
+        for i in range(self.num_images):
+            strbuf = ''
+            for j in range(3):
+                for k in range(self.num_joints):
+                    strbuf = strbuf + str(self.all_pred2D[i, j, k]) + ' '
+            buf_2D.append(strbuf)
+        self.pred3D_result = self.data_path + 'result_py\\'
+        if not os.path.exists(self.pred3D_result):
+            os.makedirs(self.pred3D_result)
+        for i in range(self.num_images):
+            fp = open(self.pred3D_result+str(i+1)+'_pred2D_py.txt', 'w')
+            fp.write(buf_2D[i+1])
             fp.close()
 
     # outbuf type -> string list (8*num_images)
