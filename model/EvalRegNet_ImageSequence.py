@@ -77,9 +77,9 @@ class HandTrack(threading.Thread):
         self.all_pred3D = np.zeros(shape=(self.num_images, 3, num_joints))
         self.all_pred2D = np.zeros(shape=(self.num_images, 3, num_joints))
         # image list
-        self.image_full = np.zero((self.num_images, 480, 640, 3), dtype=np.int32)
+        self.image_full = np.zeros((self.num_images, 480, 640, 3), dtype=np.int32)
         # bounding box
-        self.BB_data = np.zero()
+        self.BB_data = np.zeros()
         
         # data number = BB data
         if np.array(self.BB_data).shape[0] != self.num_images:
