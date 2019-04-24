@@ -184,7 +184,7 @@ class HandTrack(threading.Thread):
             strbuf = ''
             for j in range(3):
                 for k in range(self.num_joints):
-                    strbuf = strbuf + str(self.all_pred3D[i, j, k]) + ' '
+                    strbuf = strbuf + '{:.3f} '.format(self.all_pred3D[i, j, k])
             buf.append(strbuf)
         return buf
 

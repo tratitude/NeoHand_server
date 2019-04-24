@@ -48,7 +48,7 @@ thread[0].load_image_buf(inputbuf)
 # model running
 thread[0].hand_track_model()
 
-# outbuf type -> string list (8*num_images)
+# outbuf type -> string list (7*63*num_images)
 outbuf = thread[0].write_result_buf()
 
 # write result
