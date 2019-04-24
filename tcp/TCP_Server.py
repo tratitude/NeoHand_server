@@ -26,8 +26,8 @@ class TServer (threading.Thread):
         self.socket = socket
         self.address = addr
 
-    def run (self, func=None):
-        strSend = ""
+    def run (self):
+        
         count = 0
         while True:
             try:
@@ -37,22 +37,17 @@ class TServer (threading.Thread):
 
                 img = Image.open(BytesIO(base64.b64decode(data)))
 
-                if func==None:
-                    strSend = ""
-                else:
-                    strSend = func(img)
-                    self.socket.send(strSend)
 
             except:
                 self.socket.close()
                 break
 
-            # filename = "D:/pictures/" + str(count) + ".jpg"
-            # img.save(filename)
+            filename = 'C:\\Users\\P100\\NeoHand_server\\dataset\\'+str(count)+'_recv.jpg'
+            img.save(filename)
 
             # test print
-            # print("output: picture " + str(count))
-            # count += 1
+            print("output: picture " + str(count))
+            count += 1
 
 while True:
     connect_socket, client_addr = server.accept()
