@@ -18,6 +18,7 @@ class HandTrack(threading.Thread):
 
     # setting from json
     def set_parameters(self):
+        '''
         with open('setting_py.json', 'r') as json_file:
             set_par = json.load(json_file)
             try:
@@ -39,7 +40,7 @@ class HandTrack(threading.Thread):
                     self.net_base_path = par['net_base_path']
                 if self.append_caffe == 1:
                     sys.path.append(self.caffe_path)
-                
+        
                 self.num_joints = 21
                 # 建造零矩陣 *****矩陣可能長得跟matlab不一樣*****
                 self.all_pred3D = np.zeros((self.num_images, 3, self.num_joints))
@@ -48,6 +49,24 @@ class HandTrack(threading.Thread):
                 self.image_full = np.zeros((self.num_images, 480, 640, 3), dtype=np.int32)
                 # bounding box
                 self.BB_data = np.zeros((self.num_images, 4), dtype=np.int32)
+        '''
+        # caffe root path
+        self.caffe_path = 'C:\\Users\\P100\\caffe\\python'
+        # cpu mode or gpu mode
+        self.mode = 0
+        # path to your images
+        self.data_path = 'C:\\Users\\P100\\NeoHand_server\\dataset\\'
+        # 檔案位子
+        self.net_base_path = 'C:\\Users\\P100\\NeoHand_server\\model\\'
+        sys.path.append(self.caffe_path)
+        self.num_joints = 21
+        # 建造零矩陣 *****矩陣可能長得跟matlab不一樣*****
+        self.all_pred3D = np.zeros((self.num_images, 3, self.num_joints))
+        self.all_pred2D = np.zeros((self.num_images, 3, self.num_joints))
+        # image list
+        self.image_full = np.zeros((self.num_images, 480, 640, 3), dtype=np.int32)
+        # bounding box
+        self.BB_data = np.zeros((self.num_images, 4), dtype=np.int32)
     
     # output setting to json
     def out_parameters(self):
@@ -72,6 +91,7 @@ class HandTrack(threading.Thread):
         else:
             # 模式設定為GPU
             caffe.set_mode_gpu()
+            caffe.set_device(0)
         # deploy檔案的路徑
         net_architecture = 'RegNet_deploy.prototxt'
         # 預訓練好的caffemodel的模型
