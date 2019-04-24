@@ -186,7 +186,7 @@ class HandTrack(threading.Thread):
                 for k in range(self.num_joints):
                     strbuf = strbuf + '{:.3f} '.format(self.all_pred3D[i, j, k])
             buf.append(strbuf)
-        return buf
+        return buf[1]
 
     # buf is a np.int32(H*W*3)
     def load_image_buf(self, buf):
