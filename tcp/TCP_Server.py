@@ -1,9 +1,5 @@
-from model.EvalRegNet_ImageSequence import HandTrack
-import os
-os.environ['GLOG_minloglevel'] = '2'
 import socket
 import threading
-
 import os
 import base64
 import re
@@ -62,26 +58,3 @@ while True:
     connect_socket, client_addr = server.accept()
     TServer(connect_socket, client_addr).start()
     
-    
-# server main function
-thread = []
-# HandTrack('env name', image numbers)
-thread.append(HandTrack('P100', 1))
-
-# setting variables
-thread[0].start()
-
-# open picture file, inputbuf type -> np.int32(H*W*3)
-inputbuf = thread[0].load_image_file()
-
-# load image buffer to model
-thread[0].load_image_buf(inputbuf)
-
-# model running
-thread[0].hand_track_model()
-
-# outbuf type -> string list (8*num_images)
-outbuf = thread[0].write_result_buf()
-
-# write result
-thread[0].write_result(outbuf)
