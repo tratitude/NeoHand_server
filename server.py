@@ -13,6 +13,8 @@ from queue import Queue
 import scipy, scipy.misc
 
 model_freq = 3
+bb_offset = 75
+
 class TServer (threading.Thread):
     def __init__ (self, socket, addr, recv_que, send_que):
         threading.Thread.__init__(self)
@@ -57,11 +59,13 @@ class TServer (threading.Thread):
                         print('send data: {}'.format(send_count))
                 
             except:
+                # ignore exception
                 '''
                 self.socket.close()
                 print('socket closed')
                 break
                 '''
+
 def send(send_que, socket):
     send_count = 0
     while send_que.qsize() > 0:
@@ -81,9 +85,13 @@ def load_image_file():
     return buf
 
 def check_model_input(recv_que, send_que):
+    # muti process by pool
     pool = mp.Pool(processes=4)
     result = []
+
+    # muti process by shared memory
     #run_model_process = []
+
     while True:
         if recv_que.qsize() > 0:
             inputbuf = recv_que.get()
@@ -92,21 +100,29 @@ def check_model_input(recv_que, send_que):
             for res in result:
                 outputbuf = res.get()
                 send_que.put(outputbuf)
+            
+            # muti process by shared memory
             '''
             p = mp.Process(target=run_model, args=(inputbuf, send_que))
             run_model_process.append(p)
             p.start()
             '''
 
-#def run_model(inputbuf, send_que):
-def run_model(inputbuf):
-    print('model start')
+# multi process by shared memory
+def run_model(inputbuf, send_que):
+# multi process by pool
+#def run_model(inputbuf):
+
+    # initialize object
     ht = HandTrack('fdmdkw', model_freq)
+    
     # setting variables
     ht.start()
+    print('model start')
+    
 
     # open picture file, inputbuf type -> np.int32(H*W*3)
-    #inputbuf = thread[0].load_image_file()
+    #inputbuf = ht.load_image_file()
 
     # load image buffer to model
     ht.load_image_buf(inputbuf)
@@ -118,10 +134,14 @@ def run_model(inputbuf):
     outbuf = ht.write_result_buf()
 
     # write result
-    #thread[0].write_result_file(outbuf)
+    #ht.write_result_file(outbuf)
+
+    # use to mutlti processing by shared memory
     #send_que.put(outbuf)
+    
     print('model finished')
-    return outbuf
+    
+    #return outbuf
 
 
 if __name__=='__main__':
@@ -137,10 +157,18 @@ if __name__=='__main__':
 
     recv_que = mp.Queue()
     send_que = mp.Queue()
+
+    # test load image to shared memory
     #img = load_image_file()
     #recv_que.put(img)
     
-    mp.Process(target=check_model_input, args=(recv_que, send_que)).start()
+    # multi process
+    #mp.Process(target=check_model_input, args=(recv_que, send_que)).start()
+    
+    # initialize object
+    ht = HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que)
+    ht.start()
+    
     while True:
         connect_socket, client_addr = server.accept()
         print('connected')

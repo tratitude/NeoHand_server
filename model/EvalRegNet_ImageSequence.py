@@ -7,19 +7,25 @@ import scipy, scipy.misc
 import matplotlib.pyplot as plt
 import json
 import threading
+import multiprocessing as mp
+from queue import Queue
 
-class HandTrack(threading.Thread):
-    def __init__(self, set_env, num_img):
-        threading.Thread.__init__(self)
+class HandTrack(mp.Process):
+    def __init__(self, set_env, num_img, bb_offset, recv_que, send_que):
+        mp.Process.__init__(self)
         # set_env is your env name in json
         self.set_env = set_env
         self.num_images = num_img
         self.set_parameters()
+        self.recv_que = recv_que
+        self.send_que = send_que
+        # sliding boundbox offset
+        self.bb_offset = bb_offset
 
     # setting from json
     def set_parameters(self):
         
-        with open('setting_py.json', 'r') as json_file:
+        with open('C:\\Users\\Kellen\\NeoHand_server\\setting_py.json', 'r') as json_file:
             set_par = json.load(json_file)
             try:
                 set_par[self.set_env]
@@ -48,7 +54,7 @@ class HandTrack(threading.Thread):
                 # image list
                 self.image_full = np.zeros((self.num_images, 480, 640, 3), dtype=np.int32)
                 # bounding box
-                self.BB_data = np.zeros((self.num_images, 4), dtype=np.int32)
+                self.BB_data = np.zeros((4), dtype=np.int32)
         '''
         # caffe root path
         self.caffe_path = 'C:\\Users\\P100\\caffe\\python'
@@ -66,7 +72,7 @@ class HandTrack(threading.Thread):
         # image list
         self.image_full = np.zeros((self.num_images, 480, 640, 3), dtype=np.int32)
         # bounding box
-        self.BB_data = np.zeros((self.num_images, 4), dtype=np.int32)
+        self.BB_data = np.zeros((1, 4), dtype=np.int32)
         '''
     # output setting to json
     def out_parameters(self):
@@ -207,6 +213,151 @@ class HandTrack(threading.Thread):
                 self.all_pred2D[i, 0:2, j] = orig_uv
                 self.all_pred2D[i, 2, j] = conf
 
+                self.update_boundbox(i)
+
+    def run(self):
+        import caffe
+        if self.mode == 1:
+            # 模式設定為CPU
+            caffe.set_mode_cpu()
+        else:
+            # 模式設定為GPU
+            caffe.set_mode_gpu()
+            caffe.set_device(0)
+        # deploy檔案的路徑
+        net_architecture = 'RegNet_deploy.prototxt'
+        # 預訓練好的caffemodel的模型
+        net_weights = 'RegNet_weights.caffemodel'
+        # 參數
+        crop_size = 128
+        #o1_parent = [1, 1, 2, 3, 4, 1, 6, 7, 8, 1, 10, 11, 12, 1, 14, 15, 16, 1, 18, 19, 20]
+        
+        self.BB_data[:] = [80, 1, 560, 480]
+
+        # data number = BB data
+        '''
+        if self.BB_data.shape[0] != self.num_images:
+            raise Exception("Bounding box file needs one line per image")
+        '''
+
+        net = caffe.Net((self.net_base_path+net_architecture), (self.net_base_path+net_weights), caffe.TEST)
+
+        while True:
+            if self.recv_que.qsize() > 0:
+                inputbuf = self.recv_que.get()
+                '''
+                for buf in inputbuf:
+                    self.image_full = np.append(self.image_full, buf, axis=0)
+                '''
+                self.image_full = np.append(self.image_full, inputbuf, axis=0)
+                print('model start')
+                for i in range(self.num_images):
+                    #self.image_full = caffe.io.load_image(image)  # image_list->image   暫時沒測 mat無法顯示
+                    #self.image_full_vis = self.image_full
+                    #self.image_full = (self.image_full * 255).astype('int32')
+                    '''
+                    minBB_u = self.BB_data[i, 0]
+                    minBB_v = self.BB_data[i, 1]
+                    maxBB_u = self.BB_data[i, 2]
+                    maxBB_v = self.BB_data[i, 3]
+                    '''
+                    height = self.image_full[i].shape[0]
+                    width = self.image_full[i].shape[1]
+                    minBB_u, minBB_v, maxBB_u, maxBB_v = self.BB_data[:]
+                    width_BB = maxBB_u - minBB_u + 1
+                    height_BB = maxBB_v - minBB_v + 1
+
+                    sidelength = max(width_BB, height_BB)
+                    tight_crop = np.zeros((sidelength, sidelength, 3))
+
+                    if width_BB > height_BB:
+                        minBB_v = minBB_v - math.floor((width_BB - height_BB) / 2)
+                        maxBB_v = min(height, maxBB_v + math.ceil((width_BB - height_BB) / 2))
+                        offset_h = max(0, -minBB_v + 1)
+                        minBB_v = max(1, minBB_v)
+                        height_BB = maxBB_v - minBB_v + 1
+                        offset_w = 0
+                    else:
+                        minBB_u = minBB_u - math.floor((height_BB - width_BB) / 2)
+                        maxBB_u = min(width, maxBB_u + math.ceil((height_BB - width_BB) / 2))
+                        offset_w = max(0, -minBB_u + 1)
+                        minBB_u = max(1, minBB_u)
+                        width_BB = maxBB_u - minBB_u + 1
+                        offset_h = 0
+                    # fill crop
+                    endBB_u = offset_w + width_BB
+                    endBB_v = offset_h + height_BB
+
+                    #   matlab的index從1開始，python從0--->往左移一格
+                    tight_crop[offset_h:(endBB_v - 1), offset_w:(endBB_u - 1), :] = self.image_full[i, minBB_v - 1:maxBB_v - 1,
+                                                                                    minBB_u - 1:maxBB_u - 1, :]
+
+                    # repeat last color at boundaries
+                    if offset_w > 0:
+                        tight_crop[:, 0:offset_w, :] = np.matlib.tile(tight_crop[:, offset_w, :], [1, offset_w, 1])
+
+                    if (width_BB < sidelength):
+                        tight_crop[:, endBB_u:sidelength, :] = np.matlib.tile(tight_crop[:, endBB_u - 1, :],
+                                                                            [1, sidelength - endBB_u, 1])
+
+                    if (offset_h > 0):
+                        tight_crop[0:offset_h, :, :] = np.matlib.tile(tight_crop[offset_h, :, :], [offset_h, 1, 1])
+
+                    if (height_BB < sidelength):
+                        tight_crop[endBB_v:sidelength, :, :] = np.matlib.tile(tight_crop[endBB_v - 1, :, :],
+                                                                            [sidelength - endBB_v, 1, 1])
+
+                    ## resize and normalize
+                    tight_crop_sized = scipy.misc.imresize(tight_crop, (crop_size, crop_size), interp='bilinear',mode='RGB')
+                    image_crop_vis = tight_crop_sized / 255
+
+                    # transform from [0,255] to [-1,1]
+                    tight_crop_sized = (tight_crop_sized / 127.5) - 1
+                    tight_crop_sized = np.transpose(tight_crop_sized, (1, 0, 2))
+                    # forward net
+                    # *******************
+                    tight_crop_sized = tight_crop_sized.swapaxes(0, 2)
+                    # tight_crop_sized = tight_crop_sized.swapaxes(1, 2)
+                    tight_crop_sized = tight_crop_sized[np.newaxis, :]
+                    net.blobs['color_crop'].data[...] = tight_crop_sized
+                    pred = net.forward()
+                    # *******************
+                    heatmaps = pred['heatmap_final']
+                    pred_3D = pred['joints3D_final_vec']
+
+                    pred_3D = np.reshape(pred_3D, (3, -1))
+                    # print(pred_3D[:, 0:3])
+                    self.all_pred3D[i - 1, :, :] = pred_3D
+
+                    # heatmap 數值誤差 會導致結果誤差
+                    heatmaps=np.reshape(heatmaps,(22,32,32))
+                    resize_fact = sidelength / crop_size
+                    for j in range(self.num_joints):
+                        heatj=heatmaps[j,:,:]
+                        heatj=np.transpose(heatj)
+                        heatj_crop=scipy.misc.imresize(heatj,(crop_size,crop_size),interp='bicubic',mode='F')
+                        conf=np.max(heatj_crop[:])
+                        maxLoc=np.argmax(heatj_crop)
+                        max_u=int(maxLoc/128)
+                        max_v=int(maxLoc%128)
+                        #orig_BB_uv = bsxfun(@min, [width_BB; height_BB], bsxfun(@max, [10;1], round([max_u; max_v] * resize_fact - [offset_w; offset_h])))
+                        BB_tmp=np.array([width_BB, height_BB]).astype(int)
+                        max_tmp=np.array([max_u,max_v])*resize_fact
+                        offset_tmp=np.array([offset_w,offset_h])
+                        BB_tmp2=((max_tmp-offset_tmp)+0.5).astype(int)
+                        orig_BB_uv = np.minimum(BB_tmp,np.maximum([1,1],BB_tmp2))
+                        #*************************************
+                        orig_uv=np.array([minBB_u, minBB_v])+ orig_BB_uv
+                        self.all_pred2D[i, 0:2, j] = orig_uv
+                        self.all_pred2D[i, 2, j] = conf
+                        
+                        self.update_boundbox(i)
+            
+                outbuf = self.write_result_buf()
+                self.send_que.put(outbuf)
+                print('model push to send_que')
+
+
     # write pred2D to file
     def write_result2D(self):
         # path of pred_3D result
@@ -269,11 +420,10 @@ class HandTrack(threading.Thread):
             buf[i] = buf[i].astype('int32')
         return buf
 
-    def init_boundbox(self):
-        for i in range(self.num_images):
-            self.BB_data[i, :] = [80, 1, 560, 480]
-    '''
-    def update_boundbox(self, num):
-        if num < self.num_images:
-            self.BB_data[num+1, :] = [np.max(np.min(self.pred2D))]
-    '''
+    def update_boundbox(self, i):
+        height = self.image_full[i].shape[0]
+        width = self.image_full[i].shape[1]
+        self.BB_data[0] = np.max(1, np.min(self.all_pred2D[i, 0, :]) - self.bb_offset).astype(np.int32)
+        self.BB_data[1] = np.max(1, np.min(self.all_pred2D[i, 1, :]) - self.bb_offset).astype(np.int32)
+        self.BB_data[2] = np.min(width, np.max(self.all_pred2D[i, 0,:] + self.bb_offset)).astype(np.int32)
+        self.BB_data[3] = np.min(width, np.max(self.all_pred2D[i, 1,:] + self.bb_offset)).astype(np.int32)
