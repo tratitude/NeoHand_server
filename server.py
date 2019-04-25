@@ -12,7 +12,6 @@ import multiprocessing as mp
 from queue import Queue
 
 model_freq = 1
-
 class TServer (threading.Thread):
     def __init__ (self, socket, addr, recv_que, send_que):
         threading.Thread.__init__(self)
