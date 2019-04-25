@@ -9,13 +9,17 @@ from PIL import Image
 from PIL import ImageFile
 from io import BytesIO
 import multiprocessing as mp
+from queue import Queue
 
 model_freq = 1
+
 class TServer (threading.Thread):
-    def __init__ (self, socket, addr):
+    def __init__ (self, socket, addr, recv_que, send_que):
         threading.Thread.__init__(self)
         self.socket = socket
         self.address = addr
+        self.recv_que = recv_que
+        self.send_que = send_que
 
     def run (self):
         strSend = ""
@@ -29,7 +33,7 @@ class TServer (threading.Thread):
                     print('recieve data failed: {}'.format(recv_count))
                     break
                 recv_count = recv_count + 1
-                print('recieve data success: {}'.format(recv_count))
+                print('recieve data: {}'.format(recv_count))
                 img = Image.open(BytesIO(base64.b64decode(data)))
                 img = np.array(img).astype('int32')
                 img_list.append(img)
@@ -38,15 +42,15 @@ class TServer (threading.Thread):
                 if recv_count % model_freq == 0:
                     recv_count = 0
                     #model_result = self.func(recv_que)
-                    recv_que.put(img_list)
+                    inputbuf = img_list[:]
+                    self.recv_que.put(inputbuf)
                     img_list.clear()
-                    model_process.start()
                 
-                if not model_process.is_alive():
+                while self.send_que.qsize() > 0:
+                    outbuf = self.send_que.get()
                     # send
                     for i in range(model_freq):
-                        outdata = recv_que.get()
-                        self.socket.send(outdata.encode('ascii'))
+                        self.socket.send(outbuf[i+1].encode('ascii'))
                         send_count = send_count + 1
                         print('send data: {}'.format(send_count))
             except:
@@ -84,28 +88,39 @@ class TServer (threading.Thread):
             # print("output: picture " + str(count))
             # count += 1
 
-def handtrack(recv_que, send_que):
-    # HandTrack('env name', image numbers)
-    ht = HandTrack('P100', model_freq)
+class handtrack(threading.Thread):
+    def __init__(self, recv_que, send_que):
+        threading.Thread.__init__(self)
+        self.recv_que = recv_que
+        self.send_que = send_que
+    def run(self):
+        while True:
+            if self.recv_que.qsize() > 0:
+                inputbuf = self.recv_que.get()
+                print('model start')
+                # HandTrack('env name', image numbers)
+                ht = HandTrack('P100', model_freq)
 
-    # setting variables
-    ht.start()
+                # setting variables
+                ht.start()
 
-    # open picture file, inputbuf type -> np.int32(H*W*3)
-    #inputbuf = thread[0].load_image_file()
+                # open picture file, inputbuf type -> np.int32(H*W*3)
+                #inputbuf = thread[0].load_image_file()
 
-    # load image buffer to model
-    ht.load_image_buf(recv_que.get())
+                # load image buffer to model
+                ht.load_image_buf(inputbuf)
 
-    # model running
-    ht.hand_track_model()
+                # model running
+                ht.hand_track_model()
+                print('model finished')
+                # outbuf type -> string list (7*63*num_images)
+                outbuf = ht.write_result_buf()
 
-    # outbuf type -> string list (7*63*num_images)
-    outbuf = ht.write_result_buf()
+                # write result
+                #thread[0].write_result_file(outbuf)
+                self.send_que.put(outbuf)
+    
 
-    # write result
-    #thread[0].write_result_file(outbuf)
-    send_que.put(outbuf)
 
 if __name__=='__main__':
     os.environ['GLOG_minloglevel'] = '2'
@@ -120,12 +135,11 @@ if __name__=='__main__':
 
     running = {}
     lock = threading.Lock()
-
-    manager = mp.Manager()
-    recv_que = mp.Queue()
-    send_que = mp.Queue()
-    model_process = mp.Process(target=handtrack, args=(recv_que, send_que))
+    recv_que = Queue()
+    send_que = Queue()
+    model_process = handtrack(recv_que, send_que)
+    model_process.start()
     while True:
         connect_socket, client_addr = server.accept()
         print('connected')
-        TServer(connect_socket, client_addr).start()
+        TServer(connect_socket, client_addr, recv_que, send_que).start()
