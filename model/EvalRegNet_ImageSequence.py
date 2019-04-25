@@ -288,9 +288,7 @@ class HandTrack(mp.Process):
                     endBB_u = offset_w + width_BB
                     endBB_v = offset_h + height_BB
 
-                    #   matlab的index從1開始，python從0--->往左移一格
-                    tight_crop[offset_h:(endBB_v - 1), offset_w:(endBB_u - 1), :] = self.image_full[i, minBB_v - 1:maxBB_v - 1,
-                                                                                    minBB_u - 1:maxBB_u - 1, :]
+                    tight_crop[offset_h:endBB_v , offset_w:endBB_u , :] = self.image_full[i, (minBB_v - 1):maxBB_v , (minBB_u - 1):maxBB_u , :]
 
                     # repeat last color at boundaries
                     if offset_w > 0:
@@ -351,8 +349,10 @@ class HandTrack(mp.Process):
                         self.all_pred2D[i, 0:2, j] = orig_uv
                         self.all_pred2D[i, 2, j] = conf
                         
-                        self.update_boundbox(i)
+                    self.update_boundbox(i)
             
+                for i in range(self.num_images):
+                    self.image_full = np.delete(self.image_full, 0, 0)
                 outbuf = self.write_result_buf()
                 self.send_que.put(outbuf)
                 print('model push to send_que')
@@ -423,7 +423,15 @@ class HandTrack(mp.Process):
     def update_boundbox(self, i):
         height = self.image_full[i].shape[0]
         width = self.image_full[i].shape[1]
-        self.BB_data[0] = np.max(1, np.min(self.all_pred2D[i, 0, :]) - self.bb_offset).astype(np.int32)
-        self.BB_data[1] = np.max(1, np.min(self.all_pred2D[i, 1, :]) - self.bb_offset).astype(np.int32)
-        self.BB_data[2] = np.min(width, np.max(self.all_pred2D[i, 0,:] + self.bb_offset)).astype(np.int32)
-        self.BB_data[3] = np.min(width, np.max(self.all_pred2D[i, 1,:] + self.bb_offset)).astype(np.int32)
+        
+        tmp0 = np.max([1, np.min(self.all_pred2D[i, 0, :]) - self.bb_offset])
+        self.BB_data[0] = tmp0.astype(np.int32)
+        
+        tmp1 = np.max([1, np.min(self.all_pred2D[i, 1, :]) - self.bb_offset])
+        self.BB_data[1] = tmp1.astype(np.int32)
+        
+        tmp2 = np.min([width, np.max(self.all_pred2D[i, 0,:]) + self.bb_offset])
+        self.BB_data[2] = tmp2.astype(np.int32)
+        
+        tmp3 = np.min([height, np.max(self.all_pred2D[i, 1,:]) + self.bb_offset])
+        self.BB_data[3] = tmp3.astype(np.int32)

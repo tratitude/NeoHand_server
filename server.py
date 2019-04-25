@@ -170,8 +170,9 @@ if __name__=='__main__':
     ht.start()
     
     while True:
+        print('server listen...')
         connect_socket, client_addr = server.accept()
-        print('connected')
+        print('connected...')
         TServer(connect_socket, client_addr, recv_que, send_que).start()
         # error
         #threading.Thread(target=send, args=(send_que, connect_socket)).start()
