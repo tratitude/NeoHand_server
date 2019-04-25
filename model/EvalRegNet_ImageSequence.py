@@ -224,7 +224,7 @@ class HandTrack(threading.Thread):
             os.makedirs(self.pred3D_result)
         for i in range(self.num_images):
             fp = open(self.pred3D_result+str(i+1)+'_pred2D_py.txt', 'w')
-            fp.write(buf_2D[i+1])
+            fp.write(buf_2D[i])
             fp.close()
 
     # write pred3D to file
@@ -235,18 +235,25 @@ class HandTrack(threading.Thread):
             os.makedirs(self.pred3D_result)
         for i in range(self.num_images):
             fp = open(self.pred3D_result+str(i+1)+'_pred3D_py.txt', 'w')
-            fp.write(buf[i+1])
+            fp.write(buf[i])
             fp.close()
 
     # outbuf type -> string list (8*num_images)
     def write_result_buf(self):
-        buf = [self.num_images]
+        buf = []
         for i in range(self.num_images):
-            strbuf = ''
+            strbuf = []
             for j in range(3):
                 for k in range(self.num_joints):
-                    strbuf = strbuf + '{:.3f} '.format(self.all_pred3D[i, j, k])
-            buf.append(strbuf)
+                    # remove the last ' '
+                    '''
+                    if k+1 == self.num_joints:
+                        strbuf = strbuf + '{:.3f}'.format(self.all_pred3D[i, j, k])
+                    else:
+                        strbuf = strbuf + '{:.3f} '.format(self.all_pred3D[i, j, k])
+                    '''
+                    strbuf.append('{:.3f}'.format(self.all_pred3D[i, j, k]))
+            buf.append(' '.join(strbuf))
         return buf
 
     # buf is a np.int32(H*W*3)

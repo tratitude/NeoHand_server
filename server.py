@@ -10,8 +10,9 @@ from PIL import ImageFile
 from io import BytesIO
 import multiprocessing as mp
 from queue import Queue
+import scipy, scipy.misc
 
-model_freq = 1
+model_freq = 3
 class TServer (threading.Thread):
     def __init__ (self, socket, addr, recv_que, send_que):
         threading.Thread.__init__(self)
@@ -46,10 +47,10 @@ class TServer (threading.Thread):
                     img_list.clear()
                 
                 while self.send_que.qsize() > 0:
-                    outbuf = self.send_que.get()
+                    outputbuf = self.send_que.get()
                     # send
                     for i in range(model_freq):
-                        self.socket.send(outbuf[i+1].encode('ascii'))
+                        self.socket.send(outputbuf[i].encode('ascii'))
                         send_count = send_count + 1
                         print('send data: {}'.format(send_count))
             except:
@@ -87,38 +88,53 @@ class TServer (threading.Thread):
             # print("output: picture " + str(count))
             # count += 1
 
-class handtrack(threading.Thread):
-    def __init__(self, recv_que, send_que):
-        threading.Thread.__init__(self)
-        self.recv_que = recv_que
-        self.send_que = send_que
-    def run(self):
-        while True:
-            if self.recv_que.qsize() > 0:
-                inputbuf = self.recv_que.get()
-                print('model start')
-                # HandTrack('env name', image numbers)
-                ht = HandTrack('P100', model_freq)
+def load_image_file():
+    data_path = 'C:\\Users\\P100\\NeoHand_server\\dataset\\picture\\'
+    buf = []
+    img_name = data_path + 'webcam_1.jpg'
+    buf.append(scipy.misc.imread(img_name))
+    buf[0] = buf[0].astype('int32')
+    return buf
 
-                # setting variables
-                ht.start()
+def check_model_input(recv_que, send_que):
+    #pool = mp.Pool(processes=10)
+    run_model_process = []
+    while True:
+        if recv_que.qsize() > 0:
+            inputbuf = recv_que.get()
+            '''
+            res = pool.apply_async(run_model, args=(inputbuf, send_que))
+            outputbuf = res.get(timeout=1)
+            send_que.put(outputbuf)
+            '''
+            p = mp.Process(target=run_model, args=(inputbuf, send_que))
+            run_model_process.append(p)
+            p.start()
 
-                # open picture file, inputbuf type -> np.int32(H*W*3)
-                #inputbuf = thread[0].load_image_file()
+def run_model(inputbuf, send_que):
 
-                # load image buffer to model
-                ht.load_image_buf(inputbuf)
+    print('model start')
+    ht = HandTrack('P100', model_freq)
+    # setting variables
+    ht.start()
 
-                # model running
-                ht.hand_track_model()
-                print('model finished')
-                # outbuf type -> string list (7*63*num_images)
-                outbuf = ht.write_result_buf()
+    # open picture file, inputbuf type -> np.int32(H*W*3)
+    #inputbuf = thread[0].load_image_file()
 
-                # write result
-                #thread[0].write_result_file(outbuf)
-                self.send_que.put(outbuf)
+    # load image buffer to model
+    ht.load_image_buf(inputbuf)
+
+    # model running
+    ht.hand_track_model()
     
+    # outbuf type -> string list (7*63*num_images)
+    outbuf = ht.write_result_buf()
+
+    # write result
+    #thread[0].write_result_file(outbuf)
+    send_que.put(outbuf)
+    print('model finished')
+    #return outbuf
 
 
 if __name__=='__main__':
@@ -132,12 +148,12 @@ if __name__=='__main__':
     server.bind((hostname, port))
     server.listen(2)
 
-    running = {}
-    lock = threading.Lock()
-    recv_que = Queue()
-    send_que = Queue()
-    model_process = handtrack(recv_que, send_que)
-    model_process.start()
+    recv_que = mp.Queue()
+    send_que = mp.Queue()
+    #img = load_image_file()
+    #recv_que.put(img)
+    
+    mp.Process(target=check_model_input, args=(recv_que, send_que)).start()
     while True:
         connect_socket, client_addr = server.accept()
         print('connected')
