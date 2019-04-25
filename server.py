@@ -22,18 +22,20 @@ class TServer (threading.Thread):
         self.send_que = send_que
 
     def run (self):
-        strSend = ""
-        recv_count = 0
         send_count = 0
+        recv_count = 0
+        recv_count_total = 0
         img_list = []
+        #threading.Thread(target=send, args=(self.send_que, self.socket)).start()
         while True:
             try:
                 data = self.socket.recv(65536)
                 if not data:
                     print('recieve data failed: {}'.format(recv_count))
                     break
+                recv_count_total = recv_count_total + 1
                 recv_count = recv_count + 1
-                print('recieve data: {}'.format(recv_count))
+                print('recieve freq: {}\trecieve count: {}'.format(recv_count, recv_count_total))
                 img = Image.open(BytesIO(base64.b64decode(data)))
                 img = np.array(img).astype('int32')
                 img_list.append(img)
@@ -53,40 +55,22 @@ class TServer (threading.Thread):
                         self.socket.send(outputbuf[i].encode('ascii'))
                         send_count = send_count + 1
                         print('send data: {}'.format(send_count))
+                
             except:
+                '''
                 self.socket.close()
                 print('socket closed')
                 break
-            '''
-            data = self.socket.recv(65536)
-            if not data:
-                print('recieve data failed: {}'.format(recv_count))
-                break
-            recv_count = recv_count + 1
-            print('recieve data success: {}'.format(recv_count))
-            img = Image.open(BytesIO(base64.b64decode(data)))
-            Image.save('C:\\Users\\P100\\NeoHand_server\\dataset'+str(recv_count)+'_recv.jpg')
-            img = np.array(img).astype('int32')
-            # append in que
-            self.recv_que.append(img)
-
-            # recv
-            if recv_count % model_freq == 0:
-                recv_count = 0
-                model_result = self.func(self.recv_que)
-                # send
-                for i in range(model_freq):
-                    self.socket.send(model_result[i+1].encode('ascii'))
-                    self.recv_que.clear()
-                    send_count = send_count + 1
-                    print('send data: {}'.format(send_count))
-            '''
-            # filename = "D:/pictures/" + str(count) + ".jpg"
-            # img.save(filename)
-
-            # test print
-            # print("output: picture " + str(count))
-            # count += 1
+                '''
+def send(send_que, socket):
+    send_count = 0
+    while send_que.qsize() > 0:
+        outputbuf = send_que.get()
+        # send
+        for i in range(model_freq):
+            socket.send(outputbuf[i].encode('ascii'))
+            send_count = send_count + 1
+            print('send data: {}'.format(send_count))
 
 def load_image_file():
     data_path = 'C:\\Users\\P100\\NeoHand_server\\dataset\\picture\\'
@@ -97,24 +81,27 @@ def load_image_file():
     return buf
 
 def check_model_input(recv_que, send_que):
-    #pool = mp.Pool(processes=10)
-    run_model_process = []
+    pool = mp.Pool(processes=4)
+    result = []
+    #run_model_process = []
     while True:
         if recv_que.qsize() > 0:
             inputbuf = recv_que.get()
-            '''
-            res = pool.apply_async(run_model, args=(inputbuf, send_que))
-            outputbuf = res.get(timeout=1)
-            send_que.put(outputbuf)
+            result.append(pool.apply_async(run_model, args=(inputbuf,)))
+        if len(result) > 0:
+            for res in result:
+                outputbuf = res.get()
+                send_que.put(outputbuf)
             '''
             p = mp.Process(target=run_model, args=(inputbuf, send_que))
             run_model_process.append(p)
             p.start()
+            '''
 
-def run_model(inputbuf, send_que):
-
+#def run_model(inputbuf, send_que):
+def run_model(inputbuf):
     print('model start')
-    ht = HandTrack('P100', model_freq)
+    ht = HandTrack('fdmdkw', model_freq)
     # setting variables
     ht.start()
 
@@ -132,9 +119,9 @@ def run_model(inputbuf, send_que):
 
     # write result
     #thread[0].write_result_file(outbuf)
-    send_que.put(outbuf)
+    #send_que.put(outbuf)
     print('model finished')
-    #return outbuf
+    return outbuf
 
 
 if __name__=='__main__':
@@ -158,3 +145,5 @@ if __name__=='__main__':
         connect_socket, client_addr = server.accept()
         print('connected')
         TServer(connect_socket, client_addr, recv_que, send_que).start()
+        # error
+        #threading.Thread(target=send, args=(send_que, connect_socket)).start()

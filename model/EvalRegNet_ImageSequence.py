@@ -18,7 +18,7 @@ class HandTrack(threading.Thread):
 
     # setting from json
     def set_parameters(self):
-        '''
+        
         with open('setting_py.json', 'r') as json_file:
             set_par = json.load(json_file)
             try:
@@ -67,7 +67,7 @@ class HandTrack(threading.Thread):
         self.image_full = np.zeros((self.num_images, 480, 640, 3), dtype=np.int32)
         # bounding box
         self.BB_data = np.zeros((self.num_images, 4), dtype=np.int32)
-    
+        '''
     # output setting to json
     def out_parameters(self):
         set_par = {}
