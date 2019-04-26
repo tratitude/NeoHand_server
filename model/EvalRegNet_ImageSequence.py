@@ -11,7 +11,7 @@ import multiprocessing as mp
 from queue import Queue
 
 class HandTrack(mp.Process):
-    def __init__(self, set_env, num_img, bb_offset, recv_que, send_que):
+    def __init__(self, set_env, num_img, bb_offset, recv_que, send_que, model_id):
         mp.Process.__init__(self)
         # set_env is your env name in json
         self.set_env = set_env
@@ -21,6 +21,7 @@ class HandTrack(mp.Process):
         self.send_que = send_que
         # sliding boundbox offset
         self.bb_offset = bb_offset
+        self.model_id = model_id
 
     # setting from json
     def set_parameters(self):
@@ -251,7 +252,7 @@ class HandTrack(mp.Process):
                     self.image_full = np.append(self.image_full, buf, axis=0)
                 '''
                 self.image_full = np.append(self.image_full, inputbuf, axis=0)
-                print('model start')
+                print('model start: {}'.format(self.model_id.value))
                 for i in range(self.num_images):
                     #self.image_full = caffe.io.load_image(image)  # image_list->image   暫時沒測 mat無法顯示
                     #self.image_full_vis = self.image_full
@@ -356,7 +357,7 @@ class HandTrack(mp.Process):
                     self.image_full = np.delete(self.image_full, 0, 0)
                 outbuf = self.write_result_buf()
                 self.send_que.put(outbuf)
-                print('model push to send_que')
+                print('model finished: {}'.format(self.model_id.value))
 
 
     # write pred2D to file

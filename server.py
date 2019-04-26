@@ -12,20 +12,21 @@ import multiprocessing as mp
 from queue import Queue
 import scipy, scipy.misc
 
-model_freq = 2
+model_freq = 1
 bb_offset = 75
 
 class TServer (threading.Thread):
-    def __init__ (self, socket, addr, recv_que, send_que):
+    def __init__ (self, socket, addr, recv_que, send_que, model_id):
         threading.Thread.__init__(self)
         self.socket = socket
         self.address = addr
         self.recv_que = recv_que
         self.send_que = send_que
+        self.model_id = model_id
 
     def run (self):
         send_count = 0
-        recv_count = 0
+        recv_freq = 0
         recv_count_total = 0
         img_list = []
         #threading.Thread(target=send, args=(self.send_que, self.socket)).start()
@@ -33,21 +34,22 @@ class TServer (threading.Thread):
             try:
                 data = self.socket.recv(65536)
                 if not data:
-                    print('recieve data failed: {}'.format(recv_count))
+                    print('recieve data failed: {}'.format(recv_count_total))
                     break
                 recv_count_total = recv_count_total + 1
-                recv_count = recv_count + 1
-                print('recieve freq: {}\trecieve count: {}'.format(recv_count, recv_count_total))
+                recv_freq = recv_freq + 1
+                print('recieve freq: {}\trecieve count: {}'.format(recv_freq, recv_count_total))
                 img = Image.open(BytesIO(base64.b64decode(data)))
                 img = np.array(img).astype('int32')
                 img_list.append(img)
 
                 # recv
-                if recv_count % model_freq == 0:
-                    recv_count = 0
+                if recv_freq % model_freq == 0:
+                    recv_freq = 0
                     #model_result = self.func(recv_que)
                     inputbuf = img_list[:]
                     self.recv_que.put(inputbuf)
+                    self.model_id.value = self.model_id.value + 1
                     img_list.clear()
                 
                 while self.send_que.qsize() > 0:
@@ -57,7 +59,6 @@ class TServer (threading.Thread):
                         self.socket.send(outputbuf[i].encode('ascii'))
                         send_count = send_count + 1
                         print('send data: {}'.format(send_count))
-                
             except:
                 break
                 
@@ -157,6 +158,7 @@ if __name__=='__main__':
 
     recv_que = mp.Queue()
     send_que = mp.Queue()
+    model_id = mp.Value('I', 0)
 
     # test load image to shared memory
     #img = load_image_file()
@@ -166,13 +168,13 @@ if __name__=='__main__':
     #mp.Process(target=check_model_input, args=(recv_que, send_que)).start()
     
     # initialize object
-    ht = HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que)
+    ht = HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que, model_id)
     ht.start()
     
     while True:
         print('server listen...')
         connect_socket, client_addr = server.accept()
         print('connected...')
-        TServer(connect_socket, client_addr, recv_que, send_que).start()
+        TServer(connect_socket, client_addr, recv_que, send_que, model_id).start()
         # error
         #threading.Thread(target=send, args=(send_que, connect_socket)).start()
