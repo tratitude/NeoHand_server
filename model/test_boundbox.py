@@ -51,7 +51,7 @@ class HandTrack():
                 self.all_pred3D = np.zeros((self.num_images, 3, self.num_joints))
                 self.all_pred2D = np.zeros((self.num_images, 3, self.num_joints))
                 # image list
-                self.image_full = np.zeros((2, 480, 640, 3), dtype=np.int32)
+                #self.image_full = np.zeros((self.num_images, 480, 640, 3), dtype=np.int32)
                 # bounding box
                 self.BB_data = np.zeros((4), dtype=np.int32)
         '''
@@ -242,15 +242,14 @@ class HandTrack():
         net = caffe.Net((self.net_base_path+net_architecture), (self.net_base_path+net_weights), caffe.TEST)
         
         buf = self.load_image_file()
-
-        k = []
-        for i in range(len(buf)):
-            k.append(buf[i])
-            if(i%2):
-                
-            else:
-                k = k + [i]
-                self.recv_que.put(k)
+        # image_full, line265 for loop, delete element for loop
+        bufsize = 2
+        self.image_full = np.zeros((bufsize, 480, 640, 3), dtype=np.int32)
+        for i in range(0, len(buf), bufsize):
+            k = []
+            for j in range(bufsize):
+                k.append(buf[i+j])
+            self.recv_que.put(k)
 
         while True:
             print('model waiting\nnum of buf: {}\nnum of image: {}'.format(self.recv_que.qsize(), self.num_images))
@@ -263,7 +262,7 @@ class HandTrack():
                 '''
                 self.image_full = np.append(self.image_full, inputbuf, axis=0)
                 print('model start')
-                for i in range(2):
+                for i in range(bufsize):
                     #self.image_full = caffe.io.load_image(image)  # image_list->image   暫時沒測 mat無法顯示
                     #self.image_full_vis = self.image_full
                     #self.image_full = (self.image_full * 255).astype('int32')
@@ -307,15 +306,13 @@ class HandTrack():
                         tight_crop[:, 0:offset_w, :] = np.matlib.tile(tight_crop[:, offset_w, :], [1, offset_w, 1])
 
                     if (width_BB < sidelength):
-                        tight_crop[:, endBB_u:sidelength, :] = np.matlib.tile(tight_crop[:, endBB_u - 1, :],
-                                                                            [1, sidelength - endBB_u, 1])
+                        tight_crop[:, endBB_u:sidelength, :] = np.matlib.tile(tight_crop[:, endBB_u - 1, :], [1, sidelength - endBB_u, 1])
 
                     if (offset_h > 0):
                         tight_crop[0:offset_h, :, :] = np.matlib.tile(tight_crop[offset_h, :, :], [offset_h, 1, 1])
 
                     if (height_BB < sidelength):
-                        tight_crop[endBB_v:sidelength, :, :] = np.matlib.tile(tight_crop[endBB_v - 1, :, :],
-                                                                            [sidelength - endBB_v, 1, 1])
+                        tight_crop[endBB_v:sidelength, :, :] = np.matlib.tile(tight_crop[endBB_v - 1, :, :], [sidelength - endBB_v, 1, 1])
 
                     ## resize and normalize
                     tight_crop_sized = scipy.misc.imresize(tight_crop, (crop_size, crop_size), interp='bilinear',mode='RGB')
@@ -363,7 +360,7 @@ class HandTrack():
                         
                     self.update_boundbox(i)
             
-                for i in range(1):
+                for i in range(bufsize):
                     self.image_full = np.delete(self.image_full, 0, 0)
                 outbuf = self.write_result_buf()
                 self.send_que.put(outbuf)
