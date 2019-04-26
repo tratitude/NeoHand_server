@@ -24,7 +24,7 @@ class HandTrack(mp.Process):
 
     # setting from json
     def set_parameters(self):
-        
+        '''
         with open('C:\\Users\\Kellen\\NeoHand_server\\setting_py.json', 'r') as json_file:
             set_par = json.load(json_file)
             try:
@@ -73,7 +73,7 @@ class HandTrack(mp.Process):
         self.image_full = np.zeros((self.num_images, 480, 640, 3), dtype=np.int32)
         # bounding box
         self.BB_data = np.zeros((1, 4), dtype=np.int32)
-        '''
+        
     # output setting to json
     def out_parameters(self):
         set_par = {}
@@ -232,7 +232,8 @@ class HandTrack(mp.Process):
         crop_size = 128
         #o1_parent = [1, 1, 2, 3, 4, 1, 6, 7, 8, 1, 10, 11, 12, 1, 14, 15, 16, 1, 18, 19, 20]
         
-        self.BB_data[:] = [80, 1, 560, 480]
+        #self.BB_data = [80, 1, 560, 480]
+        self.BB_data = [1, 1, 640, 480]
 
         # data number = BB data
         '''
@@ -349,7 +350,7 @@ class HandTrack(mp.Process):
                         self.all_pred2D[i, 0:2, j] = orig_uv
                         self.all_pred2D[i, 2, j] = conf
                         
-                    self.update_boundbox(i)
+                    #self.update_boundbox(i)
             
                 for i in range(self.num_images):
                     self.image_full = np.delete(self.image_full, 0, 0)
@@ -394,8 +395,8 @@ class HandTrack(mp.Process):
         buf = []
         for i in range(self.num_images):
             strbuf = []
-            for j in range(3):
-                for k in range(self.num_joints):
+            for k in range(self.num_joints):
+                for j in range(3):
                     # remove the last ' '
                     '''
                     if k+1 == self.num_joints:
@@ -403,7 +404,7 @@ class HandTrack(mp.Process):
                     else:
                         strbuf = strbuf + '{:.3f} '.format(self.all_pred3D[i, j, k])
                     '''
-                    strbuf.append('{:.3f}'.format(self.all_pred3D[i, j, k]))
+                    strbuf.append('{:.3f}'.format(self.all_pred2D[i, j, k]))
             buf.append(' '.join(strbuf))
         return buf
 

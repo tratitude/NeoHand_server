@@ -12,7 +12,7 @@ import multiprocessing as mp
 from queue import Queue
 import scipy, scipy.misc
 
-model_freq = 3
+model_freq = 2
 bb_offset = 75
 
 class TServer (threading.Thread):
@@ -59,12 +59,12 @@ class TServer (threading.Thread):
                         print('send data: {}'.format(send_count))
                 
             except:
-                # ignore exception
-                '''
-                self.socket.close()
-                print('socket closed')
                 break
-                '''
+                
+        self.socket.close()
+        print('socket closed')
+                
+                
 
 def send(send_que, socket):
     send_count = 0
