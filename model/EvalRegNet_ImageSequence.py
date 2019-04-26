@@ -9,9 +9,10 @@ import json
 import threading
 import multiprocessing as mp
 from queue import Queue
+import copy
 
 class HandTrack(mp.Process):
-    def __init__(self, set_env, num_img, bb_offset, recv_que, send_que):
+    def __init__(self, set_env, num_img, bb_offset, recv_que, send_que, model_id):
         mp.Process.__init__(self)
         # set_env is your env name in json
         self.set_env = set_env
@@ -21,10 +22,11 @@ class HandTrack(mp.Process):
         self.send_que = send_que
         # sliding boundbox offset
         self.bb_offset = bb_offset
+        self.model_id = model_id
 
     # setting from json
     def set_parameters(self):
-        
+        '''
         with open('C:\\Users\\Kellen\\NeoHand_server\\setting_py.json', 'r') as json_file:
             set_par = json.load(json_file)
             try:
@@ -73,7 +75,7 @@ class HandTrack(mp.Process):
         self.image_full = np.zeros((self.num_images, 480, 640, 3), dtype=np.int32)
         # bounding box
         self.BB_data = np.zeros((1, 4), dtype=np.int32)
-        '''
+        
     # output setting to json
     def out_parameters(self):
         set_par = {}
@@ -232,7 +234,8 @@ class HandTrack(mp.Process):
         crop_size = 128
         #o1_parent = [1, 1, 2, 3, 4, 1, 6, 7, 8, 1, 10, 11, 12, 1, 14, 15, 16, 1, 18, 19, 20]
         
-        self.BB_data[:] = [80, 1, 560, 480]
+        #self.BB_data = [80, 1, 560, 480]
+        self.BB_data = [1, 1, 640, 480]
 
         # data number = BB data
         '''
@@ -250,7 +253,8 @@ class HandTrack(mp.Process):
                     self.image_full = np.append(self.image_full, buf, axis=0)
                 '''
                 self.image_full = np.append(self.image_full, inputbuf, axis=0)
-                print('model start')
+                id = copy.copy(self.num_images)
+                print('model start: {}'.format(id))
                 for i in range(self.num_images):
                     #self.image_full = caffe.io.load_image(image)  # image_list->image   暫時沒測 mat無法顯示
                     #self.image_full_vis = self.image_full
@@ -289,21 +293,20 @@ class HandTrack(mp.Process):
                     endBB_v = offset_h + height_BB
 
                     tight_crop[offset_h:endBB_v , offset_w:endBB_u , :] = self.image_full[i, (minBB_v - 1):maxBB_v , (minBB_u - 1):maxBB_u , :]
-
                     # repeat last color at boundaries
                     if offset_w > 0:
-                        tight_crop[:, 0:offset_w, :] = np.matlib.tile(tight_crop[:, offset_w, :], [1, offset_w, 1])
+                        tight_crop[:, 0:offset_w, :] = np.matlib.tile(tight_crop[:, offset_w:(offset_w+1), :], (1, offset_w, 1))
 
                     if (width_BB < sidelength):
-                        tight_crop[:, endBB_u:sidelength, :] = np.matlib.tile(tight_crop[:, endBB_u - 1, :],
-                                                                            [1, sidelength - endBB_u, 1])
+                        tight_crop[:, endBB_u:sidelength, :] = np.matlib.tile(tight_crop[:, (endBB_u - 1):endBB_u , :],
+                                                                            (1, sidelength - endBB_u, 1))
 
                     if (offset_h > 0):
-                        tight_crop[0:offset_h, :, :] = np.matlib.tile(tight_crop[offset_h, :, :], [offset_h, 1, 1])
+                        tight_crop[0:offset_h, :, :] = np.matlib.tile(tight_crop[offset_h:(offset_h+1), :, :],(offset_h, 1, 1))
 
                     if (height_BB < sidelength):
-                        tight_crop[endBB_v:sidelength, :, :] = np.matlib.tile(tight_crop[endBB_v - 1, :, :],
-                                                                            [sidelength - endBB_v, 1, 1])
+                        tight_crop[endBB_v:sidelength, :, :] = np.matlib.tile(tight_crop[(endBB_v - 1):endBB_v, :, :],
+                                                                            (sidelength - endBB_v, 1, 1))
 
                     ## resize and normalize
                     tight_crop_sized = scipy.misc.imresize(tight_crop, (crop_size, crop_size), interp='bilinear',mode='RGB')
@@ -355,7 +358,7 @@ class HandTrack(mp.Process):
                     self.image_full = np.delete(self.image_full, 0, 0)
                 outbuf = self.write_result_buf()
                 self.send_que.put(outbuf)
-                print('model push to send_que')
+                print('model finished: {}'.format(id))
 
 
     # write pred2D to file
@@ -394,8 +397,8 @@ class HandTrack(mp.Process):
         buf = []
         for i in range(self.num_images):
             strbuf = []
-            for j in range(3):
-                for k in range(self.num_joints):
+            for k in range(self.num_joints):
+                for j in range(3):
                     # remove the last ' '
                     '''
                     if k+1 == self.num_joints:
@@ -403,7 +406,7 @@ class HandTrack(mp.Process):
                     else:
                         strbuf = strbuf + '{:.3f} '.format(self.all_pred3D[i, j, k])
                     '''
-                    strbuf.append('{:.3f}'.format(self.all_pred3D[i, j, k]))
+                    strbuf.append('{:.3f}'.format(self.all_pred2D[i, j, k]))
             buf.append(' '.join(strbuf))
         return buf
 
@@ -423,15 +426,7 @@ class HandTrack(mp.Process):
     def update_boundbox(self, i):
         height = self.image_full[i].shape[0]
         width = self.image_full[i].shape[1]
-        
-        tmp0 = np.max([1, np.min(self.all_pred2D[i, 0, :]) - self.bb_offset])
-        self.BB_data[0] = tmp0.astype(np.int32)
-        
-        tmp1 = np.max([1, np.min(self.all_pred2D[i, 1, :]) - self.bb_offset])
-        self.BB_data[1] = tmp1.astype(np.int32)
-        
-        tmp2 = np.min([width, np.max(self.all_pred2D[i, 0,:]) + self.bb_offset])
-        self.BB_data[2] = tmp2.astype(np.int32)
-        
-        tmp3 = np.min([height, np.max(self.all_pred2D[i, 1,:]) + self.bb_offset])
-        self.BB_data[3] = tmp3.astype(np.int32)
+        self.BB_data[0] = int(np.max([1, np.min(self.all_pred2D[i, 0, :]) - self.bb_offset]))
+        self.BB_data[1] = int(np.max([1, np.min(self.all_pred2D[i, 1, :]) - self.bb_offset]))
+        self.BB_data[2] = int(np.min([width, np.max(self.all_pred2D[i, 0,:]) + self.bb_offset]))
+        self.BB_data[3] = int(np.min([height, np.max(self.all_pred2D[i, 1,:]) + self.bb_offset]))
