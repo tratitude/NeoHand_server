@@ -407,6 +407,8 @@ class HandTrack(mp.Process):
                         strbuf = strbuf + '{:.3f} '.format(self.all_pred3D[i, j, k])
                     '''
                     strbuf.append('{:.3f}'.format(self.all_pred2D[i, j, k]))
+            for i in range(4):
+                strbuf.append(str(self.BB_data[i])) #'1','2','3'
             buf.append(' '.join(strbuf))
         return buf
 

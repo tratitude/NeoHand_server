@@ -1,6 +1,6 @@
 clear;
 data_path = 'C:\Users\P100\NeoHand_server\dataset\picture\result_py\';
-data_prefix = 'pred2D_py';
+data_prefix = 'pred3D_py';
 data_suffix = '.txt';
 num_joints = 21;
 
@@ -23,6 +23,14 @@ for i=1:num_images
     all_pred2D(i,:,:) = num;
     fclose(dataID);
 
+    for x=1:21
+      for c=1:3
+            if(c==1)
+              all_pred2D[i,c,x]=all_pred2D[i,c,x]*320-320;
+            else
+              all_pred2D[i,c,x]=all_pred2D[i,c,x]*240-240;
+            end
+    end
     
     % visualize skeleton in all_pred2D
     figure(5); clf;
