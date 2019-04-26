@@ -27,18 +27,30 @@ for i=1:num_images
     % visualize skeleton in all_pred2D
     figure(5); clf;
     %t
-    plot3(reshape([all_pred2D(i,1,:); all_pred2D(i,1,t_parent)],[2,21]), reshape([all_pred2D(i,2,:); all_pred2D(i,2,t_parent)], [2,21]), reshape([all_pred2D(i,3,:); all_pred2D(i,3,t_parent)],[2,21]),'r','LineWidth',3,'Color','y');
+    plot3(reshape([all_pred2D(i,1,:); all_pred2D(i,1,t_parent)],[2,21]),
+          reshape([all_pred2D(i,2,:); all_pred2D(i,2,t_parent)], [2,21]),
+          reshape([all_pred2D(i,3,:); all_pred2D(i,3,t_parent)],[2,21]),'r','LineWidth',3,'Color','y');
     a5=gca; hold(a5, 'on');
     %i
-    plot3(reshape([all_pred2D(i,1,:); all_pred2D(i,1,i_parent)],[2,21]), reshape([all_pred2D(i,2,:); all_pred2D(i,2,i_parent)], [2,21]), reshape([all_pred2D(i,3,:); all_pred2D(i,3,i_parent)],[2,21]),'r','LineWidth',3,'Color','m');
+    plot3(reshape([all_pred2D(i,1,:); all_pred2D(i,1,i_parent)],[2,21]),
+          reshape([all_pred2D(i,2,:); all_pred2D(i,2,i_parent)], [2,21]),
+          reshape([all_pred2D(i,3,:); all_pred2D(i,3,i_parent)],[2,21]),'r','LineWidth',3,'Color','m');
     %m
-    plot3(reshape([all_pred2D(i,1,:); all_pred2D(i,1,m_parent)],[2,21]), reshape([all_pred2D(i,2,:); all_pred2D(i,2,m_parent)], [2,21]), reshape([all_pred2D(i,3,:); all_pred2D(i,3,m_parent)],[2,21]),'r','LineWidth',3,'Color','c');
+    plot3(reshape([all_pred2D(i,1,:); all_pred2D(i,1,m_parent)],[2,21]),
+          reshape([all_pred2D(i,2,:); all_pred2D(i,2,m_parent)], [2,21]),
+          reshape([all_pred2D(i,3,:); all_pred2D(i,3,m_parent)],[2,21]),'r','LineWidth',3,'Color','c');
     %r
-    plot3(reshape([all_pred2D(i,1,:); all_pred2D(i,1,r_parent)],[2,21]), reshape([all_pred2D(i,2,:); all_pred2D(i,2,r_parent)], [2,21]), reshape([all_pred2D(i,3,:); all_pred2D(i,3,r_parent)],[2,21]),'r','LineWidth',3,'Color','g');
+    plot3(reshape([all_pred2D(i,1,:); all_pred2D(i,1,r_parent)],[2,21]), 
+          reshape([all_pred2D(i,2,:); all_pred2D(i,2,r_parent)], [2,21]),
+          reshape([all_pred2D(i,3,:); all_pred2D(i,3,r_parent)],[2,21]),'r','LineWidth',3,'Color','g');
     %l
-    plot3(reshape([all_pred2D(i,1,:); all_pred2D(i,1,l_parent)],[2,21]), reshape([all_pred2D(i,2,:); all_pred2D(i,2,l_parent)], [2,21]), reshape([all_pred2D(i,3,:); all_pred2D(i,3,l_parent)],[2,21]),'r','LineWidth',3,'Color','black');
+    plot3(reshape([all_pred2D(i,1,:); all_pred2D(i,1,l_parent)],[2,21]),
+          reshape([all_pred2D(i,2,:); all_pred2D(i,2,l_parent)], [2,21]),
+          reshape([all_pred2D(i,3,:); all_pred2D(i,3,l_parent)],[2,21]),'r','LineWidth',3,'Color','black');
     % visualize joint
-    p5 = plot3(reshape(all_pred2D(i,1,:),[1,21]), reshape(all_pred2D(i,2,:),[1,21]), reshape(all_pred2D(i,3,:),[1,21]), 'o');
+    p5 = plot3(reshape(all_pred2D(i,1,:),[1,21]),
+               reshape(all_pred2D(i,2,:),[1,21]),
+               reshape(all_pred2D(i,3,:),[1,21]), 'o');
     p5.MarkerSize = 10;
     p5.MarkerFaceColor = 'b';
 end
