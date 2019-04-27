@@ -11,18 +11,20 @@ from io import BytesIO
 import multiprocessing as mp
 from queue import Queue
 import scipy, scipy.misc
+from PIL import ImageEnhance
 
 model_freq = 1
-bb_offset = 75
+bb_offset = 50
+width = 640
+height = 480
 
 class TServer (threading.Thread):
-    def __init__ (self, socket, addr, recv_que, send_que, model_id):
+    def __init__ (self, socket, addr, recv_que, send_que):
         threading.Thread.__init__(self)
         self.socket = socket
         self.address = addr
         self.recv_que = recv_que
         self.send_que = send_que
-        self.model_id = model_id
 
     def run (self):
         send_count = 0
@@ -34,36 +36,54 @@ class TServer (threading.Thread):
             try:
                 data = self.socket.recv(65536)
                 if not data:
-                    print('recieve data failed: {}'.format(recv_count_total))
+                    print('** recieve data failed: {} **'.format(recv_count_total))
                     break
                 recv_count_total = recv_count_total + 1
                 recv_freq = recv_freq + 1
                 print('recieve freq: {}\trecieve count: {}'.format(recv_freq, recv_count_total))
-                img = Image.open(BytesIO(base64.b64decode(data)))
-                img = np.array(img).astype('int32')
-                img_list.append(img)
-
-                # recv
-                if recv_freq % model_freq == 0:
-                    recv_freq = 0
-                    #model_result = self.func(recv_que)
-                    inputbuf = img_list[:]
-                    self.recv_que.put(inputbuf)
-                    self.model_id.value = self.model_id.value + 1
-                    img_list.clear()
-                
-                while self.send_que.qsize() > 0:
-                    outputbuf = self.send_que.get()
-                    # send
-                    for i in range(model_freq):
-                        self.socket.send(outputbuf[i].encode('ascii'))
-                        send_count = send_count + 1
-                        print('send data: {}'.format(send_count))
+                try:
+                    img = Image.open(BytesIO(base64.b64decode(data)))
+                except:
+                    recv_freq = recv_freq - 1
+                    recv_count_total = recv_count_total - 1
+                    print('** image format error... **')
+                    continue
+                else:
+                    #set contrast
+                    #img = ImageEnhance.Contrast(img).enhance(15)
+                    w, h = img.size
+                    print('recieve image size: {} * {}'.format(w, h))
+                    if(width == w and height == h):
+                        img = np.array(img).astype('int32')
+                        img_list.append(img)
+                    else:
+                        recv_freq = recv_freq - 1
+                        recv_count_total = recv_count_total - 1
+                        print('** image size error... **')
+                        continue
+                    
+                    
+                    # recv
+                    if recv_freq % model_freq == 0:
+                        recv_freq = 0
+                        #model_result = self.func(recv_que)
+                        inputbuf = img_list[:]
+                        self.recv_que.put(inputbuf)
+                        img_list.clear()
+                    
+                    while self.send_que.qsize() > 0:
+                        outputbuf = self.send_que.get()
+                        # send
+                        for i in range(model_freq):
+                            self.socket.send(outputbuf[i].encode('ascii'))
+                            send_count = send_count + 1
+                            print('send data: {}'.format(send_count))
+                            print('outputbuf size: {}'.format(len(outputbuf[i])))
             except:
                 break
                 
         self.socket.close()
-        print('socket closed')
+        print('** socket closed **')
                 
                 
 
@@ -158,7 +178,6 @@ if __name__=='__main__':
 
     recv_que = mp.Queue()
     send_que = mp.Queue()
-    model_id = mp.Value('I', 0)
 
     # test load image to shared memory
     #img = load_image_file()
@@ -168,13 +187,13 @@ if __name__=='__main__':
     #mp.Process(target=check_model_input, args=(recv_que, send_que)).start()
     
     # initialize object
-    ht = HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que, model_id)
+    ht = HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que)
     ht.start()
     
     while True:
         print('server listen...')
         connect_socket, client_addr = server.accept()
         print('connected...')
-        TServer(connect_socket, client_addr, recv_que, send_que, model_id).start()
+        TServer(connect_socket, client_addr, recv_que, send_que).start()
         # error
         #threading.Thread(target=send, args=(send_que, connect_socket)).start()

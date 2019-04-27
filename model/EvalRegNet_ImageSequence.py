@@ -12,7 +12,7 @@ from queue import Queue
 import copy
 
 class HandTrack(mp.Process):
-    def __init__(self, set_env, num_img, bb_offset, recv_que, send_que, model_id):
+    def __init__(self, set_env, num_img, bb_offset, recv_que, send_que):
         mp.Process.__init__(self)
         # set_env is your env name in json
         self.set_env = set_env
@@ -22,7 +22,6 @@ class HandTrack(mp.Process):
         self.send_que = send_que
         # sliding boundbox offset
         self.bb_offset = bb_offset
-        self.model_id = model_id
 
     # setting from json
     def set_parameters(self):
@@ -72,7 +71,7 @@ class HandTrack(mp.Process):
         self.all_pred3D = np.zeros((self.num_images, 3, self.num_joints))
         self.all_pred2D = np.zeros((self.num_images, 3, self.num_joints))
         # image list
-        self.image_full = np.zeros((self.num_images, 480, 640, 3), dtype=np.int32)
+        self.image_full = np.empty((self.num_images, 480, 640, 3), dtype=np.int32)
         # bounding box
         self.BB_data = np.zeros((1, 4), dtype=np.int32)
         
@@ -242,18 +241,20 @@ class HandTrack(mp.Process):
         if self.BB_data.shape[0] != self.num_images:
             raise Exception("Bounding box file needs one line per image")
         '''
-
+        id = 0
         net = caffe.Net((self.net_base_path+net_architecture), (self.net_base_path+net_weights), caffe.TEST)
 
         while True:
             if self.recv_que.qsize() > 0:
                 inputbuf = self.recv_que.get()
+                print('model inputbuf size: {}'.format(len(inputbuf)))
                 '''
                 for buf in inputbuf:
                     self.image_full = np.append(self.image_full, buf, axis=0)
                 '''
-                self.image_full = np.append(self.image_full, inputbuf, axis=0)
-                id = copy.copy(self.num_images)
+                #self.image_full = np.append(self.image_full, inputbuf, axis=0)
+                self.image_full = np.array(inputbuf)
+                id = id + 1
                 print('model start: {}'.format(id))
                 for i in range(self.num_images):
                     #self.image_full = caffe.io.load_image(image)  # image_list->image   暫時沒測 mat無法顯示
@@ -410,6 +411,7 @@ class HandTrack(mp.Process):
             for i in range(4):
                 strbuf.append(str(self.BB_data[i])) #'1','2','3'
             buf.append(' '.join(strbuf))
+        #print('write result buf: {}'.format(len(buf)))
         return buf
 
     # buf is a np.int32(H*W*3)
