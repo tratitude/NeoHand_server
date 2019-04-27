@@ -78,7 +78,9 @@ class TServer (threading.Thread):
                             self.socket.send(outputbuf[i].encode('ascii'))
                             send_count = send_count + 1
                             print('send data: {}'.format(send_count))
-                            print('outputbuf size: {}'.format(len(outputbuf[i])))
+                            buf_split = outputbuf[i].split(' ', len(outputbuf[i]))
+                            print('outputbuf size: {}'.format(len(buf_split)))
+                            print(outputbuf[i])
             except:
                 break
                 
