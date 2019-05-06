@@ -14,7 +14,7 @@ import scipy, scipy.misc
 from PIL import ImageEnhance
 
 model_freq = 1
-bb_offset = 50
+bb_offset = 25
 width = 640
 height = 480
 
@@ -80,7 +80,7 @@ class TServer (threading.Thread):
                             print('send data: {}'.format(send_count))
                             buf_split = outputbuf[i].split(' ', len(outputbuf[i]))
                             print('outputbuf size: {}'.format(len(buf_split)))
-                            print(outputbuf[i])
+                            #print(outputbuf[i])
             except:
                 break
                 
@@ -195,7 +195,7 @@ if __name__=='__main__':
     while True:
         print('server listen...')
         connect_socket, client_addr = server.accept()
-        print('connected...')
+        print('connected by {}'.format(client_addr))
         TServer(connect_socket, client_addr, recv_que, send_que).start()
         # error
         #threading.Thread(target=send, args=(send_que, connect_socket)).start()
