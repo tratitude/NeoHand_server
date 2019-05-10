@@ -1,3 +1,5 @@
+#!~/miniconda3/bin/python
+# -*- coding: utf-8 -*-
 from model.EvalRegNet_ImageSequence import HandTrack
 import os
 import socket
@@ -42,6 +44,12 @@ class TServer (threading.Thread):
                 recv_freq = recv_freq + 1
                 print('recieve freq: {}\trecieve count: {}'.format(recv_freq, recv_count_total))
                 try:
+                    '''
+                    base64_data = re.sub('^data:image/.+;base64,', '', data)
+                    byte_data = base64.b64decode(base64_data)
+                    img_data = BytesIO(byte_data)
+                    img = Image.open(img_data)
+                    '''
                     img = Image.open(BytesIO(base64.b64decode(data)))
                 except:
                     recv_freq = recv_freq - 1

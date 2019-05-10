@@ -1,10 +1,12 @@
+#!~/miniconda3/bin/python
+# -*- coding: utf-8 -*-
 import os
 import sys
 import math
 import numpy as np
 import numpy.matlib
 import scipy, scipy.misc
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import json
 import threading
 import multiprocessing as mp
@@ -64,8 +66,8 @@ class HandTrack(mp.Process):
         # path to your images
         self.data_path = 'C:\\Users\\P100\\NeoHand_server\\dataset\\'
         # 檔案位子
-        self.net_base_path = 'C:\\Users\\P100\\NeoHand_server\\model\\'
-        sys.path.append(self.caffe_path)
+        self.net_base_path = '/home/csieert/code/NeoHand_server/model/'
+        #sys.path.append(self.caffe_path)
         self.num_joints = 21
         # 建造零矩陣 *****矩陣可能長得跟matlab不一樣*****
         self.all_pred3D = np.zeros((self.num_images, 3, self.num_joints))
