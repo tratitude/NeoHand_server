@@ -238,39 +238,23 @@ class HandTrack(mp.Process):
 		
 		#self.BB_data = [80, 1, 560, 480]
 		self.BB_data = [1, 1, 640, 480]
-
-		# data number = BB data
-		'''
-		if self.BB_data.shape[0] != self.num_images:
-			raise Exception("Bounding box file needs one line per image")
-		'''
+		
 		id = 0
 		net = caffe.Net((self.net_base_path+net_architecture), (self.net_base_path+net_weights), caffe.TEST)
 
 		while True:
 			if self.recv_que.qsize() > 0:
 				inputbuf = self.recv_que.get()
-				# timer start
-				tStart = time.time()
-				print('model inputbuf size: {}'.format(len(inputbuf)))
-				'''
-				for buf in inputbuf:
-					self.image_full = np.append(self.image_full, buf, axis=0)
-				'''
-				#self.image_full = np.append(self.image_full, inputbuf, axis=0)
+				inputbuf_size = len(inputbuf)
 				self.image_full = np.array(inputbuf)
+
+				print('model inputbuf size: {}'.format(inputbuf_size))
 				id = id + 1
 				print('model start: {}'.format(id))
+				# timer start
+				tStart = time.time()
+
 				for i in range(self.num_images):
-					#self.image_full = caffe.io.load_image(image)  # image_list->image   暫時沒測 mat無法顯示
-					#self.image_full_vis = self.image_full
-					#self.image_full = (self.image_full * 255).astype('int32')
-					'''
-					minBB_u = self.BB_data[i, 0]
-					minBB_v = self.BB_data[i, 1]
-					maxBB_u = self.BB_data[i, 2]
-					maxBB_v = self.BB_data[i, 3]
-					'''
 					height = self.image_full[i].shape[0]
 					width = self.image_full[i].shape[1]
 					minBB_u, minBB_v, maxBB_u, maxBB_v = self.BB_data[:]
@@ -359,13 +343,13 @@ class HandTrack(mp.Process):
 						self.all_pred2D[i, 2, j] = conf
 						
 					self.update_boundbox(i)
-			
+
+				print('model finished: {}'.format(id))
+				
 				for i in range(self.num_images):
 					self.image_full = np.delete(self.image_full, 0, 0)
 				outbuf = self.write_result_buf()
 				self.send_que.put(outbuf)
-				print('model finished: {}'.format(id))
-
 
 	# write pred2D to file
 	def write_result2D(self):
