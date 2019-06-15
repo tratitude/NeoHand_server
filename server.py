@@ -38,11 +38,11 @@ class TServer (threading.Thread):
             try:
                 data = self.socket.recv(65536)
                 if not data:
-                    print('** recieve data failed: {} **'.format(recv_count_total))
+                    #print('** recieve data failed: {} **'.format(recv_count_total))
                     break
                 recv_count_total = recv_count_total + 1
                 recv_freq = recv_freq + 1
-                print('recieve freq: {}\trecieve count: {}'.format(recv_freq, recv_count_total))
+                #print('recieve freq: {}\trecieve count: {}'.format(recv_freq, recv_count_total))
                 try:
                     '''
                     base64_data = re.sub('^data:image/.+;base64,', '', data)
@@ -54,20 +54,20 @@ class TServer (threading.Thread):
                 except:
                     recv_freq = recv_freq - 1
                     recv_count_total = recv_count_total - 1
-                    print('** image format error... **')
+                    #print('** image format error... **')
                     continue
                 else:
                     #set contrast
                     #img = ImageEnhance.Contrast(img).enhance(15)
                     w, h = img.size
-                    print('recieve image size: {} * {}'.format(w, h))
+                    #print('recieve image size: {} * {}'.format(w, h))
                     if(width == w and height == h):
                         img = np.array(img).astype('int32')
                         img_list.append(img)
                     else:
                         recv_freq = recv_freq - 1
                         recv_count_total = recv_count_total - 1
-                        print('** image size error... **')
+                        #print('** image size error... **')
                         continue
                     
                     
@@ -85,9 +85,10 @@ class TServer (threading.Thread):
                         for i in range(model_freq):
                             self.socket.send(outputbuf[i].encode('ascii'))
                             send_count = send_count + 1
-                            print('send data: {}'.format(send_count))
-                            buf_split = outputbuf[i].split(' ', len(outputbuf[i]))
-                            print('outputbuf size: {}'.format(len(buf_split)))
+                            #print('send data: {}'.format(send_count))
+                            
+                            #buf_split = outputbuf[i].split(' ', len(outputbuf[i]))
+                            #print('outputbuf size: {}'.format(len(buf_split)))
                             #print(outputbuf[i])
             except:
                 break

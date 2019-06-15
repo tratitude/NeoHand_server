@@ -41,30 +41,30 @@ class TServer (td.Thread):
             try:
                 data = self.socket.recv(65536)
                 if not data:
-                    print('** P: {} recieve data failed: {} **'.format(self.process_id, recv_count_total))
+                    #print('** P: {} recieve data failed: {} **'.format(self.process_id, recv_count_total))
                     break
                 recv_count_total = recv_count_total + 1
                 recv_freq = recv_freq + 1
-                print('P: {} recieve freq: {}\trecieve count: {}'.format(self.process_id,recv_freq, recv_count_total))
+                #print('P: {} recieve freq: {}\trecieve count: {}'.format(self.process_id,recv_freq, recv_count_total))
                 try:
                     img = Image.open(BytesIO(base64.b64decode(data)))
                 except:
                     recv_freq = recv_freq - 1
                     recv_count_total = recv_count_total - 1
-                    print('** P: {} image format error... **'.format(self.process_id))
+                    #print('** P: {} image format error... **'.format(self.process_id))
                     continue
                 else:
                     #set contrast
                     #img = ImageEnhance.Contrast(img).enhance(15)
                     w, h = img.size
-                    print('P: {} recieve image size: {} * {}'.format(self.process_id,w, h))
+                    #print('P: {} recieve image size: {} * {}'.format(self.process_id,w, h))
                     if(width == w and height == h):
                         img = np.array(img).astype('int32')
                         img_list.append(img)
                     else:
                         recv_freq = recv_freq - 1
                         recv_count_total = recv_count_total - 1
-                        print('** P: {} image size error... **'.format(self.process_id))
+                        #print('** P: {} image size error... **'.format(self.process_id))
                         continue
 
                     # recv
@@ -80,7 +80,8 @@ class TServer (td.Thread):
                         for i in range(model_freq):
                             self.socket.send(outputbuf[i].encode('ascii'))
                             send_count = send_count + 1
-                            print('P: {} send data: {}'.format(self.process_id, send_count))
+                            #print('P: {} send data: {}'.format(self.process_id, send_count))
+                            
                             # output buffer context check
                             #buf_split = buf.split(' ', len(buf))
                             #print('P: {} outputbuf size: {}'.format(self.process_id,len(buf_split)))
