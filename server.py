@@ -78,20 +78,19 @@ class TServer (threading.Thread):
                         inputbuf = img_list[:]
                         self.recv_que.put(inputbuf)
                         img_list.clear()
+                    
+                    while self.send_que.qsize() > 0:
+                        outputbuf = self.send_que.get()
+                        # send
+                        for i in range(model_freq):
+                            self.socket.send(outputbuf[i].encode('ascii'))
+                            send_count = send_count + 1
+                            print('send data: {}'.format(send_count))
+                            buf_split = outputbuf[i].split(' ', len(outputbuf[i]))
+                            print('outputbuf size: {}'.format(len(buf_split)))
+                            #print(outputbuf[i])
             except:
                 break
-            send_que_size = self.send_que.qsize()
-            # send
-            for i in range(send_que_size):
-                outputbuf = self.send_que.get()
-                for buf in outputbuf:
-                    self.socket.send(buf.encode('ascii'))
-                    send_count = send_count + 1
-                    print('P: {} send data: {}'.format(0, send_count))
-                    # output buffer context check
-                    #buf_split = buf.split(' ', len(buf))
-                    #print('P: {} outputbuf size: {}'.format(self.process_id,len(buf_split)))
-                    #print(buf)
                 
         self.socket.close()
         print('** socket closed **')
@@ -198,7 +197,7 @@ if __name__=='__main__':
     #mp.Process(target=check_model_input, args=(recv_que, send_que)).start()
     
     # initialize object
-    ht = HandTrack('fdmdkw', bb_offset, recv_que, send_que, 0)
+    ht = HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que)
     ht.start()
     
     while True:

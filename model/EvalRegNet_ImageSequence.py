@@ -15,17 +15,16 @@ import copy
 import time
 
 class HandTrack(mp.Process):
-	def __init__(self, set_env, bb_offset, recv_que, send_que, process_id):
+	def __init__(self, set_env, num_img, bb_offset, recv_que, send_que):
 		mp.Process.__init__(self)
 		# set_env is your env name in json
 		self.set_env = set_env
-		self.num_images = 1
+		self.num_images = num_img
 		self.set_parameters()
 		self.recv_que = recv_que
 		self.send_que = send_que
 		# sliding boundbox offset
 		self.bb_offset = bb_offset
-		self.process_id = process_id
 
 	# setting from json
 	def set_parameters(self):
@@ -72,10 +71,10 @@ class HandTrack(mp.Process):
 		sys.path.append(self.caffe_path)
 		self.num_joints = 21
 		# 建造零矩陣 *****矩陣可能長得跟matlab不一樣*****
-		#self.all_pred3D = np.zeros((self.num_images, 3, self.num_joints))
-		#self.all_pred2D = np.zeros((self.num_images, 3, self.num_joints))
+		self.all_pred3D = np.zeros((self.num_images, 3, self.num_joints))
+		self.all_pred2D = np.zeros((self.num_images, 3, self.num_joints))
 		# image list
-		#self.image_full = np.empty((self.num_images, 480, 640, 3), dtype=np.int32)
+		self.image_full = np.empty((self.num_images, 480, 640, 3), dtype=np.int32)
 		# bounding box
 		self.BB_data = np.zeros((1, 4), dtype=np.int32)
 		
@@ -243,23 +242,15 @@ class HandTrack(mp.Process):
 		id = 0
 		net = caffe.Net((self.net_base_path+net_architecture), (self.net_base_path+net_weights), caffe.TEST)
 
-		print('** p: {} model process setup finished **'.format(self.process_id))
 		while True:
-			recv_que_size = self.recv_que.qsize()
-			if recv_que_size > 0:
-				inputbuf = []
-				for i in range(recv_que_size):
-					img = self.recv_que.get()
-					inputbuf.append(img)
-				self.num_images = len(inputbuf)
+			if self.recv_que.qsize() > 0:
+				inputbuf = self.recv_que.get()
+				inputbuf_size = len(inputbuf)
 				self.image_full = np.array(inputbuf)
 
-				self.all_pred3D = np.zeros((self.num_images, 3, self.num_joints))
-				self.all_pred2D = np.zeros((self.num_images, 3, self.num_joints))
-				self.image_full = np.empty((self.num_images, 480, 640, 3), dtype=np.int32)
-
+				print('model inputbuf size: {}'.format(inputbuf_size))
 				id = id + 1
-				print('p: {} model start: {} inputbuf size: {}'.format(self.process_id, id, self.num_images))
+				print('model start: {}'.format(id))
 				# timer start
 				tStart = time.time()
 
@@ -352,13 +343,13 @@ class HandTrack(mp.Process):
 						self.all_pred2D[i, 2, j] = conf
 						
 					self.update_boundbox(i)
+
+				print('model finished: {}'.format(id))
 				
 				for i in range(self.num_images):
 					self.image_full = np.delete(self.image_full, 0, 0)
 				outbuf = self.write_result_buf()
 				self.send_que.put(outbuf)
-
-				print('p: {} model finished: {}'.format(self.process_id, id))
 
 	# write pred2D to file
 	def write_result2D(self):
