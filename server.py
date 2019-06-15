@@ -197,7 +197,7 @@ if __name__=='__main__':
     #mp.Process(target=check_model_input, args=(recv_que, send_que)).start()
     
     # initialize object
-    ht = HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que)
+    ht = HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que, 0)
     ht.start()
     
     while True:
