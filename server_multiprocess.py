@@ -19,18 +19,18 @@ model_freq = 1
 bb_offset = 25
 width = 640
 height = 480
-recv_que_list = []
-send_que_list = []
-model_processes_list = []
+recv_que_dic = {}
+send_que_dic = {}
+model_processes_dic = {}
 client_number = 4
 
 class TServer (td.Thread):
-    def __init__ (self, socket, process_id):
+    def __init__ (self, socket, client_addr):
         td.Thread.__init__(self)
         self.socket = socket
-        self.process_id = process_id
-        self.recv_que = recv_que_list[process_id]
-        self.send_que = send_que_list[process_id]
+        self.process_id = client_addr
+        self.recv_que = recv_que_dic[self.process_id]
+        self.send_que = send_que_dic[self.process_id]
 
     def run (self):
         send_count = 0
@@ -89,8 +89,13 @@ class TServer (td.Thread):
                 break
                 
         self.socket.close()
-        print('** socket closed **')
-
+        print('** P: {} socket closed **'.format(self.process_id))
+        model_processes_dic[self.process_id].terminate()
+        model_processes_dic[self.process_id].join()
+        del model_processes_dic[self.process_id]
+        del recv_que_dic[self.process_id]
+        del send_que_dic[self.process_id]
+        print('** P: {} Process closed process_number: {}**'.format(self.process_id, len(model_processes_dic)))
 
 if __name__=='__main__':
     os.environ['GLOG_minloglevel'] = '2'
@@ -103,19 +108,15 @@ if __name__=='__main__':
     server.bind((hostname, port))
     server.listen(client_number)
 
-    process_id = 0
-
     while True:
         print('server listen...')
         connect_socket, client_addr = server.accept()
         print('connected by {}'.format(client_addr))
         
-        recv_que_list.append(mp.Queue())
-        send_que_list.append(mp.Queue())
-        model_processes_list.append(HandTrack('', model_freq, bb_offset, recv_que_list[process_id], send_que_list[process_id], process_id))
-        model_processes_list[process_id].start()
+        recv_que_dic = { client_addr : mp.Queue() }
+        send_que_dic = { client_addr : mp.Queue() }
+        model_processes_dic = { client_addr : HandTrack('', model_freq, bb_offset, recv_que_dic[client_addr], send_que_dic[client_addr], client_addr) }
+        model_processes_dic[client_addr].start()
         # waiting process setup
         time.sleep(5)
-        TServer(connect_socket, process_id).start()
-
-        process_id = process_id + 1
+        TServer(connect_socket, client_addr).start()
