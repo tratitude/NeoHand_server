@@ -20,9 +20,9 @@ bb_offset = 25
 width = 640
 height = 480
 
-class TServer (mp.Process):
+class TServer (threading.Thread):
     def __init__ (self, socket, addr, recv_que, send_que):
-        mp.Process.__init__(self)
+        threading.Thread.__init__(self)
         self.socket = socket
         self.address = addr
         self.recv_que = recv_que
@@ -80,7 +80,21 @@ class TServer (mp.Process):
                     
             except:
                 break
-                
+            '''
+            while self.send_que.qsize() > 0:
+                outputbuf_with_socket = self.send_que.get()
+                outputbuf = outputbuf_with_socket[0]
+                socket = outputbuf_with_socket[1]
+                # send
+                for i in range(model_freq):
+                    try:
+                        socket.send(outputbuf[i].encode('ascii'))
+                    except:
+                        break
+                    else:
+                        send_count = send_count + 1
+                        print('send data: {}'.format(send_count))
+            '''
         self.socket.close()
         print('** socket closed **')
 
@@ -198,8 +212,8 @@ if __name__=='__main__':
     
     # initialize object
     HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que).start()
-    mp.Process(target=send, args=(send_que,send_count)).start()
-    #threading.Thread(target=send, args=(send_que,send_count)).start()
+    #mp.Process(target=send, args=(send_que,send_count)).start()
+    threading.Thread(target=send, args=(send_que,send_count)).start()
 
     while True:
         print('** server listen **')
