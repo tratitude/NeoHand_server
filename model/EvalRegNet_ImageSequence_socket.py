@@ -118,7 +118,7 @@ class HandTrack(mp.Process):
 		net = caffe.Net((self.net_base_path+net_architecture), (self.net_base_path+net_weights), caffe.TEST)
 		print('** HandTrack process ready **')
 		while True:
-			img_event.wait()
+			self.img_event.wait()
 			if self.recv_que.qsize() > 0:
 				inputbuf_with_socket = self.recv_que.get()
 				inputbuf = inputbuf_with_socket[0]
@@ -232,11 +232,11 @@ class HandTrack(mp.Process):
 				outputbuf = self.write_result_buf()
 				outputbuf_with_socket = [outputbuf, socket]
 				self.send_que.put(outputbuf_with_socket)
-				send_event.set()
+				self.send_event.set()
 				BB_data_dic[socket] = self.BB_data
 
 				print('model finished: {}'.format(id))
-				img_event.clear()
+				self.img_event.clear()
 
 	# write pred2D to file
 	def write_result2D(self):

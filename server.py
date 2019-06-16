@@ -77,7 +77,7 @@ class TServer (threading.Thread):
                         inputbuf = img_list[:]
                         inputbuf_with_socket = [inputbuf, self.socket]
                         self.recv_que.put(inputbuf_with_socket)
-                        img_Event.set()
+                        self.img_event.set()
                         img_list.clear()
                     
             except:
@@ -99,6 +99,7 @@ class TServer (threading.Thread):
             '''
         self.socket.close()
         print('** socket closed **')
+        self.killed = True
 
 
 def send(send_que, send_count,send_event):
