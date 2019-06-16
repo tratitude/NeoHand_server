@@ -21,12 +21,13 @@ width = 640
 height = 480
 
 class TServer (threading.Thread):
-    def __init__ (self, socket, addr, recv_que, send_que):
+    def __init__ (self, socket, addr, recv_que, send_que,img_event):
         threading.Thread.__init__(self)
         self.socket = socket
         self.address = addr
         self.recv_que = recv_que
         self.send_que = send_que
+        self.img_event = img_event
 
     def run (self):
         send_count = 0
@@ -76,6 +77,7 @@ class TServer (threading.Thread):
                         inputbuf = img_list[:]
                         inputbuf_with_socket = [inputbuf, self.socket]
                         self.recv_que.put(inputbuf_with_socket)
+                        img_Event.set()
                         img_list.clear()
                     
             except:
@@ -99,9 +101,10 @@ class TServer (threading.Thread):
         print('** socket closed **')
 
 
-def send(send_que, send_count):
+def send(send_que, send_count,send_event):
     print('** send process ready **')
     while True:
+        send_event.wait()
         if send_que.qsize() > 0:
             outputbuf_with_socket = send_que.get()
             outputbuf = outputbuf_with_socket[0]
@@ -119,6 +122,7 @@ def send(send_que, send_count):
                     #buf_split = outputbuf[i].split(' ', len(outputbuf[i]))
                     #print('outputbuf size: {}'.format(len(buf_split)))
                     #print(outputbuf[i])
+            send_event.clear()
 
 def load_image_file():
     data_path = 'C:\\Users\\P100\\NeoHand_server\\dataset\\picture\\'
@@ -210,15 +214,19 @@ if __name__=='__main__':
     # multi process
     #mp.Process(target=check_model_input, args=(recv_que, send_que)).start()
     
+    #signal argument
+    img_event=mp.Event()
+    send_event=mp.Event()
+
     # initialize object
-    HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que).start()
+    HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que,img_event,send_event).start()
     #mp.Process(target=send, args=(send_que,send_count)).start()
-    threading.Thread(target=send, args=(send_que,send_count)).start()
+    threading.Thread(target=send, args=(send_que,send_count,send_event)).start()
 
     while True:
         print('** server listen **')
         connect_socket, client_addr = server.accept()
         print('** connected by {} **'.format(client_addr))
-        TServer(connect_socket, client_addr, recv_que, send_que).start()
+        TServer(connect_socket, client_addr, recv_que, send_que,img_event).start()
         # error
         #threading.Thread(target=send, args=(send_que, connect_socket)).start()

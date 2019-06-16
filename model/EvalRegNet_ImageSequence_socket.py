@@ -15,7 +15,7 @@ import copy
 import time
 
 class HandTrack(mp.Process):
-	def __init__(self, set_env, num_img, bb_offset, recv_que, send_que):
+	def __init__(self, set_env, num_img, bb_offset, recv_que, send_que,img_event,send_event):
 		mp.Process.__init__(self)
 		# set_env is your env name in json
 		self.set_env = set_env
@@ -25,6 +25,8 @@ class HandTrack(mp.Process):
 		self.send_que = send_que
 		# sliding boundbox offset
 		self.bb_offset = bb_offset
+		self.img_event = img_event
+		self.send_event = send_event
 
 	# setting from json
 	def set_parameters(self):
@@ -116,6 +118,7 @@ class HandTrack(mp.Process):
 		net = caffe.Net((self.net_base_path+net_architecture), (self.net_base_path+net_weights), caffe.TEST)
 		print('** HandTrack process ready **')
 		while True:
+			img_event.wait()
 			if self.recv_que.qsize() > 0:
 				inputbuf_with_socket = self.recv_que.get()
 				inputbuf = inputbuf_with_socket[0]
@@ -229,9 +232,11 @@ class HandTrack(mp.Process):
 				outputbuf = self.write_result_buf()
 				outputbuf_with_socket = [outputbuf, socket]
 				self.send_que.put(outputbuf_with_socket)
+				send_event.set()
 				BB_data_dic[socket] = self.BB_data
 
 				print('model finished: {}'.format(id))
+				img_event.clear()
 
 	# write pred2D to file
 	def write_result2D(self):
