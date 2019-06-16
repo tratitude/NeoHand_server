@@ -1,6 +1,6 @@
 #!~/miniconda3/bin/python
 # -*- coding: utf-8 -*-
-from model.EvalRegNet_ImageSequence import HandTrack
+from model.EvalRegNet_ImageSequence_socket import HandTrack
 import os
 import socket
 import threading
@@ -20,9 +20,9 @@ bb_offset = 25
 width = 640
 height = 480
 
-class TServer (threading.Thread):
+class TServer (mp.Process):
     def __init__ (self, socket, addr, recv_que, send_que):
-        threading.Thread.__init__(self)
+        mp.Process.__init__(self)
         self.socket = socket
         self.address = addr
         self.recv_que = recv_que
@@ -33,16 +33,15 @@ class TServer (threading.Thread):
         recv_freq = 0
         recv_count_total = 0
         img_list = []
-        #threading.Thread(target=send, args=(self.send_que, self.socket)).start()
         while True:
             try:
                 data = self.socket.recv(65536)
                 if not data:
-                    #print('** recieve data failed: {} **'.format(recv_count_total))
+                    print('** recieve data failed: {} **'.format(recv_count_total))
                     break
                 recv_count_total = recv_count_total + 1
                 recv_freq = recv_freq + 1
-                #print('recieve freq: {}\trecieve count: {}'.format(recv_freq, recv_count_total))
+                print('recieve freq: {}\trecieve count: {}'.format(recv_freq, recv_count_total))
                 try:
                     '''
                     base64_data = re.sub('^data:image/.+;base64,', '', data)
@@ -54,7 +53,7 @@ class TServer (threading.Thread):
                 except:
                     recv_freq = recv_freq - 1
                     recv_count_total = recv_count_total - 1
-                    #print('** image format error... **')
+                    print('** image format error... **')
                     continue
                 else:
                     #set contrast
@@ -67,46 +66,45 @@ class TServer (threading.Thread):
                     else:
                         recv_freq = recv_freq - 1
                         recv_count_total = recv_count_total - 1
-                        #print('** image size error... **')
+                        print('** image size error... **')
                         continue
                     
                     
                     # recv
                     if recv_freq % model_freq == 0:
                         recv_freq = 0
-                        #model_result = self.func(recv_que)
                         inputbuf = img_list[:]
-                        self.recv_que.put(inputbuf)
+                        inputbuf_with_socket = [inputbuf, self.socket]
+                        self.recv_que.put(inputbuf_with_socket)
                         img_list.clear()
                     
-                    while self.send_que.qsize() > 0:
-                        outputbuf = self.send_que.get()
-                        # send
-                        for i in range(model_freq):
-                            self.socket.send(outputbuf[i].encode('ascii'))
-                            send_count = send_count + 1
-                            #print('send data: {}'.format(send_count))
-                            
-                            #buf_split = outputbuf[i].split(' ', len(outputbuf[i]))
-                            #print('outputbuf size: {}'.format(len(buf_split)))
-                            #print(outputbuf[i])
             except:
                 break
                 
         self.socket.close()
         print('** socket closed **')
-                
-                
 
-def send(send_que, socket):
-    send_count = 0
-    while send_que.qsize() > 0:
-        outputbuf = send_que.get()
-        # send
-        for i in range(model_freq):
-            socket.send(outputbuf[i].encode('ascii'))
-            send_count = send_count + 1
-            print('send data: {}'.format(send_count))
+
+def send(send_que, send_count):
+    print('** send process ready **')
+    while True:
+        if send_que.qsize() > 0:
+            outputbuf_with_socket = send_que.get()
+            outputbuf = outputbuf_with_socket[0]
+            socket = outputbuf_with_socket[1]
+            # send
+            for i in range(model_freq):
+                try:
+                    socket.send(outputbuf[i].encode('ascii'))
+                except:
+                    break
+                else:
+                    send_count = send_count + 1
+                    print('send data: {}'.format(send_count))
+                
+                    #buf_split = outputbuf[i].split(' ', len(outputbuf[i]))
+                    #print('outputbuf size: {}'.format(len(buf_split)))
+                    #print(outputbuf[i])
 
 def load_image_file():
     data_path = 'C:\\Users\\P100\\NeoHand_server\\dataset\\picture\\'
@@ -189,6 +187,7 @@ if __name__=='__main__':
 
     recv_que = mp.Queue()
     send_que = mp.Queue()
+    send_count = 0
 
     # test load image to shared memory
     #img = load_image_file()
@@ -198,13 +197,14 @@ if __name__=='__main__':
     #mp.Process(target=check_model_input, args=(recv_que, send_que)).start()
     
     # initialize object
-    ht = HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que, 0)
-    ht.start()
-    
+    HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que).start()
+    mp.Process(target=send, args=(send_que,send_count)).start()
+    #threading.Thread(target=send, args=(send_que,send_count)).start()
+
     while True:
-        print('server listen...')
+        print('** server listen **')
         connect_socket, client_addr = server.accept()
-        print('connected by {}'.format(client_addr))
+        print('** connected by {} **'.format(client_addr))
         TServer(connect_socket, client_addr, recv_que, send_que).start()
         # error
         #threading.Thread(target=send, args=(send_que, connect_socket)).start()
