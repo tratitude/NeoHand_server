@@ -21,9 +21,9 @@ width = 640
 height = 480
 
 class TServer (threading.Thread):
-    def __init__ (self, socket, addr, recv_que, send_que,img_event):
+    def __init__ (self, connect_socket, addr, recv_que, send_que,img_event):
         threading.Thread.__init__(self)
-        self.socket = socket
+        self.connect_socket = connect_socket
         self.address = addr
         self.recv_que = recv_que
         self.send_que = send_que
@@ -36,13 +36,13 @@ class TServer (threading.Thread):
         img_list = []
         while True:
             try:
-                data = self.socket.recv(65536)
+                data = self.connect_socket.recv(65536)
                 if not data:
-                    print('** recieve data failed: {} **'.format(recv_count_total))
+                    print('** P:{} recieve data failed: {} **'.format(self.address,recv_count_total))
                     break
                 recv_count_total = recv_count_total + 1
                 recv_freq = recv_freq + 1
-                print('recieve freq: {}\trecieve count: {}'.format(recv_freq, recv_count_total))
+                print('P: {} recieve freq: {}\trecieve count: {}'.format(self.address,recv_freq, recv_count_total))
                 try:
                     '''
                     base64_data = re.sub('^data:image/.+;base64,', '', data)
@@ -54,7 +54,7 @@ class TServer (threading.Thread):
                 except:
                     recv_freq = recv_freq - 1
                     recv_count_total = recv_count_total - 1
-                    print('** image format error... **')
+                    print('** P:{} image format error... **'.format(self.address))
                     continue
                 else:
                     #set contrast
@@ -67,7 +67,7 @@ class TServer (threading.Thread):
                     else:
                         recv_freq = recv_freq - 1
                         recv_count_total = recv_count_total - 1
-                        print('** image size error... **')
+                        print('** P: {} image size error... **'.format(self.address))
                         continue
                     
                     
@@ -75,7 +75,7 @@ class TServer (threading.Thread):
                     if recv_freq % model_freq == 0:
                         recv_freq = 0
                         inputbuf = img_list[:]
-                        inputbuf_with_socket = [inputbuf, self.socket]
+                        inputbuf_with_socket = [inputbuf, self.connect_socket, self.address]
                         self.recv_que.put(inputbuf_with_socket)
                         self.img_event.set()
                         img_list.clear()
@@ -97,32 +97,35 @@ class TServer (threading.Thread):
                         send_count = send_count + 1
                         print('send data: {}'.format(send_count))
             '''
-        self.socket.close()
-        print('** socket closed **')
-        self.killed = True
+        self.connect_socket.close()
+        print('** P:{} socket closed **'.format(self.address))
 
-
-def send(send_que, send_count,send_event):
+def send(send_que,send_event):
     print('** send process ready **')
     while True:
         send_event.wait()
         if send_que.qsize() > 0:
             outputbuf_with_socket = send_que.get()
             outputbuf = outputbuf_with_socket[0]
-            socket = outputbuf_with_socket[1]
+            connect_socket = outputbuf_with_socket[1]
+            address = outputbuf_with_socket[2]
+            id = outputbuf_with_socket[3]
             # send
             for i in range(model_freq):
                 try:
-                    socket.send(outputbuf[i].encode('ascii'))
+                    #connect_socket.send(outputbuf[i].encode('ascii'))
+                    sendstr = str(address) + str(id)
+                    connect_socket.send(sendstr.encode('ascii'))
                 except:
+                    print('** P: {} socket closed send data: {} **'.format(address,id))
                     break
                 else:
-                    send_count = send_count + 1
-                    print('send data: {}'.format(send_count))
+                    print('P: {} send data: {}'.format(address,id))
                 
                     #buf_split = outputbuf[i].split(' ', len(outputbuf[i]))
                     #print('outputbuf size: {}'.format(len(buf_split)))
                     #print(outputbuf[i])
+                
             send_event.clear()
 
 def load_image_file():
@@ -206,7 +209,6 @@ if __name__=='__main__':
 
     recv_que = mp.Queue()
     send_que = mp.Queue()
-    send_count = 0
 
     # test load image to shared memory
     #img = load_image_file()
@@ -222,7 +224,7 @@ if __name__=='__main__':
     # initialize object
     HandTrack('fdmdkw', model_freq, bb_offset, recv_que, send_que,img_event,send_event).start()
     #mp.Process(target=send, args=(send_que,send_count)).start()
-    threading.Thread(target=send, args=(send_que,send_count,send_event)).start()
+    threading.Thread(target=send, args=(send_que,send_event)).start()
 
     while True:
         print('** server listen **')

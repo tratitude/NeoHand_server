@@ -113,6 +113,7 @@ class HandTrack(mp.Process):
 		#o1_parent = [1, 1, 2, 3, 4, 1, 6, 7, 8, 1, 10, 11, 12, 1, 14, 15, 16, 1, 18, 19, 20]
 		
 		BB_data_dic = {}
+		image_count = {}
 		
 		id = 0
 		net = caffe.Net((self.net_base_path+net_architecture), (self.net_base_path+net_weights), caffe.TEST)
@@ -123,17 +124,21 @@ class HandTrack(mp.Process):
 				inputbuf_with_socket = self.recv_que.get()
 				inputbuf = inputbuf_with_socket[0]
 				inputbuf_size = len(inputbuf)
-				socket = inputbuf_with_socket[1]
+				connect_socket = inputbuf_with_socket[1]
+				address = inputbuf_with_socket[2]
 				self.image_full = np.array(inputbuf)
 				
 				try:
-					self.BB_data = BB_data_dic[socket]
+					self.BB_data = BB_data_dic[address]
 				except:
 					#self.BB_data = [80, 1, 560, 480]
 					self.BB_data = [1, 1, 640, 480]
-
+				try:
+					id = image_count[address]
+				except:
+					id = 0
 				id = id + 1
-				print('model start: {} inputbuf size: {}'.format(id, inputbuf_size))
+				print('P: {} model start: {} inputbuf size: {}'.format(address, id, inputbuf_size))
 				# timer start
 				tStart = time.time()
 
@@ -230,12 +235,15 @@ class HandTrack(mp.Process):
 				for i in range(self.num_images):
 					self.image_full = np.delete(self.image_full, 0, 0)
 				outputbuf = self.write_result_buf()
-				outputbuf_with_socket = [outputbuf, socket]
+				outputbuf_with_socket = [outputbuf, connect_socket, address, id]
 				self.send_que.put(outputbuf_with_socket)
 				self.send_event.set()
-				BB_data_dic[socket] = self.BB_data
 
-				print('model finished: {}'.format(id))
+				# update BB_data_dic, image_count
+				BB_data_dic[address] = self.BB_data
+				image_count[address] = id
+
+				print('P: {} model finished: {}'.format(address,id))
 				self.img_event.clear()
 
 	# write pred2D to file
