@@ -114,7 +114,7 @@ def send(send_que,send_event):
             for i in range(model_freq):
                 try:
                     #connect_socket.send(outputbuf[i].encode('ascii'))
-                    sendstr = str(address) + str(id)
+                    sendstr = str(address) + ' ' + str(id)
                     connect_socket.send(sendstr.encode('ascii'))
                 except:
                     print('** P: {} socket closed send data: {} **'.format(address,id))
