@@ -1,0 +1,4 @@
+Total iterations: 10
+Iteration: 0
+Input frames: 1000	 time: 34.032437801361084	 fps: 29.383731069656324
+Output frames: 461	 time: 34.032437801361084	 fps: 13.545900023111566

@@ -1,0 +1,7 @@
+webcam4
+	- no flip, correspond to figure joints.png
+webcam5
+	- cam setting
+		- defult
+	- bg just wite
+	- have externel light(cell phone)
