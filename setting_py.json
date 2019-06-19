@@ -12,7 +12,7 @@
         {
             "net_base_path": "C:\\Users\\Kellen\\NeoHand_server\\model\\",
             "caffe_path": "",
-            "data_path": "C:\\Users\\Kellen\\NeoHand_server\\dataset\\picture\\",
+            "data_path": "C:\\Users\\Kellen\\Pictures\\dataset\\webcam4\\",
             "append_caffe": 0,
             "mode": 1
         }
