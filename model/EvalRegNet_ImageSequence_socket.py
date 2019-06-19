@@ -15,7 +15,7 @@ import copy
 import time
 
 class HandTrack(mp.Process):
-	def __init__(self, set_env, num_img, bb_offset, recv_que, send_que, process_id):
+	def __init__(self, set_env, num_img, bb_offset, recv_que, send_que,img_event,send_event):
 		mp.Process.__init__(self)
 		# set_env is your env name in json
 		self.set_env = set_env
@@ -25,7 +25,8 @@ class HandTrack(mp.Process):
 		self.send_que = send_que
 		# sliding boundbox offset
 		self.bb_offset = bb_offset
-		self.process_id = process_id
+		self.img_event = img_event
+		self.send_event = send_event
 
 	# setting from json
 	def set_parameters(self):
@@ -111,20 +112,33 @@ class HandTrack(mp.Process):
 		crop_size = 128
 		#o1_parent = [1, 1, 2, 3, 4, 1, 6, 7, 8, 1, 10, 11, 12, 1, 14, 15, 16, 1, 18, 19, 20]
 		
-		#self.BB_data = [80, 1, 560, 480]
-		self.BB_data = [1, 1, 640, 480]
+		BB_data_dic = {}
+		image_count = {}
 		
 		id = 0
 		net = caffe.Net((self.net_base_path+net_architecture), (self.net_base_path+net_weights), caffe.TEST)
-		print('** p: {} model process setup finished **'.format(self.process_id))
+		print('** HandTrack process ready **')
 		while True:
+			self.img_event.wait()
 			if self.recv_que.qsize() > 0:
-				inputbuf = self.recv_que.get()
+				inputbuf_with_socket = self.recv_que.get()
+				inputbuf = inputbuf_with_socket[0]
 				inputbuf_size = len(inputbuf)
+				connect_socket = inputbuf_with_socket[1]
+				address = inputbuf_with_socket[2]
 				self.image_full = np.array(inputbuf)
-
+				
+				try:
+					self.BB_data = BB_data_dic[address]
+				except:
+					#self.BB_data = [80, 1, 560, 480]
+					self.BB_data = [1, 1, 640, 480]
+				try:
+					id = image_count[address]
+				except:
+					id = 0
 				id = id + 1
-				#print('p: {} model start: {} inputbuf size: {}'.format(self.process_id, id, inputbuf_size))
+				print('P: {} model start: {} inputbuf size: {}'.format(address, id, inputbuf_size))
 				# timer start
 				tStart = time.time()
 
@@ -220,10 +234,17 @@ class HandTrack(mp.Process):
 				
 				for i in range(self.num_images):
 					self.image_full = np.delete(self.image_full, 0, 0)
-				outbuf = self.write_result_buf()
-				self.send_que.put(outbuf)
+				outputbuf = self.write_result_buf()
+				outputbuf_with_socket = [outputbuf, connect_socket, address, id]
+				self.send_que.put(outputbuf_with_socket)
+				self.send_event.set()
 
-				#print('p: {} model finished: {}'.format(self.process_id, id))
+				# update BB_data_dic, image_count
+				BB_data_dic[address] = self.BB_data
+				image_count[address] = id
+
+				print('P: {} model finished: {}'.format(address,id))
+				self.img_event.clear()
 
 	# write pred2D to file
 	def write_result2D(self):

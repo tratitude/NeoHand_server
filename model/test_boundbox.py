@@ -260,7 +260,8 @@ class HandTrack():
                 for buf in inputbuf:
                     self.image_full = np.append(self.image_full, buf, axis=0)
                 '''
-                self.image_full = np.append(self.image_full, inputbuf, axis=0)
+                #self.image_full = np.append(self.image_full, inputbuf, axis=0)
+                self.image_full = np.array(inputbuf)
                 print('model start')
                 for i in range(bufsize):
                     #self.image_full = caffe.io.load_image(image)  # image_list->image   暫時沒測 mat無法顯示
@@ -397,7 +398,7 @@ class HandTrack():
             fp = open(self.pred3D_result+str(i+1)+'_pred3D_py.txt', 'w')
             fp.write(buf[i])
             fp.close()
-
+    '''
     # outbuf type -> string list (8*num_images)
     def write_result_buf(self):
         buf = []
@@ -415,7 +416,26 @@ class HandTrack():
                     strbuf.append('{:.3f}'.format(self.all_pred3D[i, j, k]))
             buf.append(' '.join(strbuf))
         return buf
-
+    '''
+    def write_result_buf(self):
+        buf = []
+        for i in range(self.num_images):
+            strbuf = []
+            for k in range(self.num_joints):
+                for j in range(3):
+                    # remove the last ' '
+                    '''
+                    if k+1 == self.num_joints:
+                        strbuf = strbuf + '{:.3f}'.format(self.all_pred3D[i, j, k])
+                    else:
+                        strbuf = strbuf + '{:.3f} '.format(self.all_pred3D[i, j, k])
+                    '''
+                    strbuf.append('{:.3f}'.format(self.all_pred2D[i, j, k]))
+            for i in range(4):
+                strbuf.append(str(self.BB_data[i])) #'1','2','3'
+            buf.append(' '.join(strbuf))
+        #print(buf)
+        return buf
     # buf is a np.int32(H*W*3)
     def load_image_buf(self, buf):
         for b in range(self.num_images):

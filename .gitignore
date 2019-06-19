@@ -1,2 +1,5 @@
 .vscode/
 dataset/picture/
+*.txt
+*.pyc
+*.png
