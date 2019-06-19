@@ -138,7 +138,7 @@ class HandTrack(mp.Process):
 				except:
 					id = 0
 				id = id + 1
-				print('P: {} model start: {} inputbuf size: {}'.format(address, id, inputbuf_size))
+				#print('P: {} model start: {} inputbuf size: {}'.format(address, id, inputbuf_size))
 				# timer start
 				tStart = time.time()
 
@@ -243,7 +243,7 @@ class HandTrack(mp.Process):
 				BB_data_dic[address] = self.BB_data
 				image_count[address] = id
 
-				print('P: {} model finished: {}'.format(address,id))
+				#print('P: {} model finished: {}'.format(address,id))
 				self.img_event.clear()
 
 	# write pred2D to file

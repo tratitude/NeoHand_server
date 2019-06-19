@@ -38,11 +38,11 @@ class TServer (threading.Thread):
             try:
                 data = self.connect_socket.recv(65536)
                 if not data:
-                    print('** P:{} recieve data failed: {} **'.format(self.address,recv_count_total))
+                    #print('** P:{} recieve data failed: {} **'.format(self.address,recv_count_total))
                     break
                 recv_count_total = recv_count_total + 1
                 recv_freq = recv_freq + 1
-                print('P: {} recieve freq: {}\trecieve count: {}'.format(self.address,recv_freq, recv_count_total))
+                #print('P: {} recieve freq: {}\trecieve count: {}'.format(self.address,recv_freq, recv_count_total))
                 try:
                     '''
                     base64_data = re.sub('^data:image/.+;base64,', '', data)
@@ -54,7 +54,7 @@ class TServer (threading.Thread):
                 except:
                     recv_freq = recv_freq - 1
                     recv_count_total = recv_count_total - 1
-                    print('** P:{} image format error... **'.format(self.address))
+                    #print('** P:{} image format error... **'.format(self.address))
                     continue
                 else:
                     #set contrast
@@ -67,7 +67,7 @@ class TServer (threading.Thread):
                     else:
                         recv_freq = recv_freq - 1
                         recv_count_total = recv_count_total - 1
-                        print('** P: {} image size error... **'.format(self.address))
+                        #print('** P: {} image size error... **'.format(self.address))
                         continue
                     
                     
@@ -117,10 +117,10 @@ def send(send_que,send_event):
                     #sendstr = str(address) + ' ' + str(id)
                     #connect_socket.send(sendstr.encode('ascii'))
                 except:
-                    print('** P: {} socket closed send data: {} **'.format(address,id))
+                    #print('** P: {} socket closed send data: {} **'.format(address,id))
                     break
-                else:
-                    print('P: {} send data: {}'.format(address,id))
+                #else:
+                    #print('P: {} send data: {}'.format(address,id))
                 
                     #buf_split = outputbuf[i].split(' ', len(outputbuf[i]))
                     #print('outputbuf size: {}'.format(len(buf_split)))
