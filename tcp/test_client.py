@@ -23,7 +23,7 @@ cap = cv2.VideoCapture(0)
 tStart = time.time()#計時開始
 
 while send_count < max_send_count:
-    time.sleep(1)
+    time.sleep(sleep_freq)
     ret, frame = cap.read()
     frame=cv2.resize(frame, (640, 480), interpolation=cv2.INTER_CUBIC)
 

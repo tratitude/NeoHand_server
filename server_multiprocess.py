@@ -22,6 +22,7 @@ height = 480
 recv_que_dic = {}
 send_que_dic = {}
 model_processes_dic = {}
+send_dic = {}
 client_number = 4
 
 class TServer (td.Thread):
@@ -73,30 +74,37 @@ class TServer (td.Thread):
                         inputbuf = img_list[:]
                         self.recv_que.put(inputbuf)
                         img_list.clear()
-                    
-                    while self.send_que.qsize() > 0:
-                        outputbuf = self.send_que.get()
-                        # send
-                        for i in range(model_freq):
-                            self.socket.send(outputbuf[i].encode('ascii'))
-                            send_count = send_count + 1
-                            #print('P: {} send data: {}'.format(self.process_id, send_count))
-                            
-                            # output buffer context check
-                            #buf_split = buf.split(' ', len(buf))
-                            #print('P: {} outputbuf size: {}'.format(self.process_id,len(buf_split)))
-                            #print(buf)
             except:
                 break
                 
         self.socket.close()
         print('** P: {} socket closed **'.format(self.process_id))
-        model_processes_dic[self.process_id].terminate()
+        #model_processes_dic[self.process_id].terminate()
         model_processes_dic[self.process_id].join()
         del model_processes_dic[self.process_id]
         del recv_que_dic[self.process_id]
         del send_que_dic[self.process_id]
         print('** P: {} Process closed process_number: {}**'.format(self.process_id, len(model_processes_dic)))
+def send(connect_socket, process_id, recv_que, send_que):
+    print('** p: {} send process setup finished **'.format(process_id))
+    send_count = 0
+    while True:
+        if send_que.qsize() > 0:
+            outputbuf = send_que.get()
+            # send
+            for i in range(model_freq):
+                #connect_socket.send(outputbuf[i].encode('ascii'))
+                send_count = send_count + 1
+
+                # test_client recv message
+                sendstr = str(process_id) + ' ' + str(send_count)
+                connect_socket.send(sendstr.encode('ascii'))
+                print('P: {} send data: {}'.format(process_id, send_count))
+                
+                # output buffer context check
+                #buf_split = buf.split(' ', len(buf))
+                #print('P: {} outputbuf size: {}'.format(self.process_id,len(buf_split)))
+                #print(buf)
 
 if __name__=='__main__':
     os.environ['GLOG_minloglevel'] = '2'
@@ -118,6 +126,8 @@ if __name__=='__main__':
         send_que_dic = { client_addr : mp.Queue() }
         model_processes_dic = { client_addr : HandTrack('', model_freq, bb_offset, recv_que_dic[client_addr], send_que_dic[client_addr], client_addr) }
         model_processes_dic[client_addr].start()
+        send_dic = {client_addr : td.Thread(target= send, args=(connect_socket, client_addr, recv_que_dic[client_addr], send_que_dic[client_addr]))}
+        send_dic[client_addr].start()
         # waiting process setup
-        time.sleep(5)
+        #time.sleep(5)
         TServer(connect_socket, client_addr).start()

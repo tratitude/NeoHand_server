@@ -124,7 +124,7 @@ class HandTrack(mp.Process):
 				self.image_full = np.array(inputbuf)
 
 				id = id + 1
-				#print('p: {} model start: {} inputbuf size: {}'.format(self.process_id, id, inputbuf_size))
+				print('p: {} model start: {} inputbuf size: {}'.format(self.process_id, id, inputbuf_size))
 				# timer start
 				tStart = time.time()
 
@@ -223,7 +223,7 @@ class HandTrack(mp.Process):
 				outbuf = self.write_result_buf()
 				self.send_que.put(outbuf)
 
-				#print('p: {} model finished: {}'.format(self.process_id, id))
+				print('p: {} model finished: {}'.format(self.process_id, id))
 
 	# write pred2D to file
 	def write_result2D(self):
